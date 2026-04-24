@@ -1,0 +1,31 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Spring Boot
+*.jar
+*.war
+*.nar
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# H2 DB 파일 (인메모리라 해당 없지만 혹시 파일 모드 쓸 경우)
+*.db
+*.mv.db
+*.trace.db
+
+# 환경변수 / 시크릿
+.env
+application-prod.yml

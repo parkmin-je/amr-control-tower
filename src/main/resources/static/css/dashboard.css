@@ -1,0 +1,139 @@
+/* ── Reset & Base ─────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #0d0d1a;
+    color: #e0e0e0;
+    min-height: 100vh;
+}
+
+/* ── Header ────────────────────────────────────────────────────── */
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 28px;
+    background: #12122a;
+    border-bottom: 1px solid #1e1e3a;
+}
+
+.header h1 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    color: #00bcd4;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 0.85rem;
+    color: #888;
+}
+
+/* ── Badge ─────────────────────────────────────────────────────── */
+.badge {
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+}
+.badge-connected    { background: #1b3a1b; color: #4caf50; }
+.badge-disconnected { background: #3a1b1b; color: #f44336; }
+
+/* ── Grid Layout ───────────────────────────────────────────────── */
+.grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: auto auto;
+    gap: 16px;
+    padding: 20px 28px;
+}
+
+/* ── Card ──────────────────────────────────────────────────────── */
+.card {
+    background: #12122a;
+    border: 1px solid #1e1e3a;
+    border-radius: 10px;
+    padding: 18px 20px;
+}
+
+.card h2 {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #00bcd4;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    border-bottom: 1px solid #1e1e3a;
+    padding-bottom: 8px;
+}
+
+/* ── Info Table ────────────────────────────────────────────────── */
+.info-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.info-table td { padding: 6px 4px; }
+.info-table td:first-child { color: #888; width: 40%; }
+.info-table td:last-child  { font-weight: 600; font-family: 'Courier New', monospace; }
+
+/* ── Battery ───────────────────────────────────────────────────── */
+.battery-wrap { display: flex; align-items: center; gap: 14px; margin-top: 10px; }
+.battery-bar-bg {
+    flex: 1;
+    height: 24px;
+    background: #1e1e3a;
+    border-radius: 12px;
+    overflow: hidden;
+}
+.battery-bar-fill {
+    height: 100%;
+    border-radius: 12px;
+    transition: width 0.5s ease, background-color 0.3s;
+}
+.battery-pct { font-size: 1.3rem; font-weight: 700; min-width: 54px; text-align: right; }
+
+/* ── Map Canvas ────────────────────────────────────────────────── */
+#map-canvas {
+    display: block;
+    background: #0a0a16;
+    border-radius: 6px;
+    border: 1px solid #1e1e3a;
+    width: 100%;
+    height: auto;
+}
+
+/* ── Stats ─────────────────────────────────────────────────────── */
+.stat-grid { display: flex; gap: 16px; }
+.stat-item { flex: 1; text-align: center; }
+.stat-val   { font-size: 2rem; font-weight: 700; color: #00bcd4; }
+.stat-label { font-size: 0.78rem; color: #888; margin-top: 4px; }
+
+/* ── Event List ────────────────────────────────────────────────── */
+.event-list { list-style: none; max-height: 200px; overflow-y: auto; font-size: 0.82rem; }
+.event-item {
+    padding: 6px 8px;
+    border-radius: 4px;
+    margin-bottom: 4px;
+    background: #1a1a2e;
+}
+.event-low_battery      { border-left: 3px solid #ff9800; }
+.event-obstacle_detected { border-left: 3px solid #f44336; }
+.event-goal_reached     { border-left: 3px solid #4caf50; }
+.event-started          { border-left: 3px solid #00bcd4; }
+.event-stopped          { border-left: 3px solid #888; }
+.event-error            { border-left: 3px solid #f44336; color: #f44336; }
+
+/* ── Card 배치 ─────────────────────────────────────────────────── */
+#card-info    { grid-column: 1; grid-row: 1; }
+#card-battery { grid-column: 2; grid-row: 1; }
+#card-map     { grid-column: 3; grid-row: 1 / 3; }
+#card-speed   { grid-column: 1 / 3; grid-row: 2; }
+#card-stats   { grid-column: 1; grid-row: 3; }
+#card-events  { grid-column: 2 / 4; grid-row: 3; }
+
+/* ── Scrollbar ─────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #0d0d1a; }
+::-webkit-scrollbar-thumb { background: #1e1e3a; border-radius: 3px; }

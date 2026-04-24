@@ -1,0 +1,43 @@
+spring:
+  application:
+    name: amr-dashboard
+
+  # 개발: H2 인메모리 DB (MySQL 없어도 바로 실행 가능)
+  datasource:
+    url: jdbc:h2:mem:amrdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  thymeleaf:
+    cache: false
+
+# ROS rosbridge 연결 설정
+rosbridge:
+  uri: ws://localhost:9090
+  reconnect-delay-ms: 3000
+  robot-id: robot-01
+
+# 로봇 상태 저장 주기 (ms)
+robot:
+  status-save-interval-ms: 1000
+
+server:
+  port: 8080
+
+logging:
+  level:
+    com.amr.dashboard: DEBUG

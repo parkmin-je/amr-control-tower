@@ -1,0 +1,34 @@
+version: '3.8'
+
+services:
+  # Spring Boot 대시보드 (ROS 없이도 단독 실행 가능 - H2 인메모리 DB 사용)
+  amr-dashboard:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+    networks:
+      - amr-net
+
+  # 운영 MySQL (선택 - 나중에 파이널 때 활성화)
+  # mysql:
+  #   image: mysql:8.0
+  #   environment:
+  #     MYSQL_ROOT_PASSWORD: amrroot
+  #     MYSQL_DATABASE: amrdb
+  #     MYSQL_USER: amr
+  #     MYSQL_PASSWORD: amrpass
+  #   ports:
+  #     - "3306:3306"
+  #   volumes:
+  #     - mysql-data:/var/lib/mysql
+  #   networks:
+  #     - amr-net
+
+networks:
+  amr-net:
+    driver: bridge
+
+# volumes:
+#   mysql-data:

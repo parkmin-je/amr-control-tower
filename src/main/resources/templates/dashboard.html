@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>AMR 관제 대시보드</title>
+    <link rel="stylesheet" th:href="@{/css/dashboard.css}">
+    <!-- SockJS + STOMP -->
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<header class="header">
+    <h1>AMR 관제 대시보드</h1>
+    <div class="header-right">
+        <span id="conn-status" class="badge badge-disconnected">DISCONNECTED</span>
+        <span id="clock"></span>
+    </div>
+</header>
+
+<main class="grid">
+
+    <!-- 로봇 기본 정보 -->
+    <section class="card" id="card-info">
+        <h2>로봇 정보</h2>
+        <table class="info-table">
+            <tr><td>Robot ID</td><td id="val-robot-id" th:text="${robotId}">-</td></tr>
+            <tr><td>위치 X</td><td><span id="val-pos-x">-</span> m</td></tr>
+            <tr><td>위치 Y</td><td><span id="val-pos-y">-</span> m</td></tr>
+            <tr><td>선속도</td><td><span id="val-linear">-</span> m/s</td></tr>
+            <tr><td>각속도</td><td><span id="val-angular">-</span> rad/s</td></tr>
+            <tr><td>마지막 수신</td><td id="val-last-time">-</td></tr>
+        </table>
+    </section>
+
+    <!-- 배터리 -->
+    <section class="card" id="card-battery">
+        <h2>배터리</h2>
+        <div class="battery-wrap">
+            <div class="battery-bar-bg">
+                <div class="battery-bar-fill" id="battery-fill"></div>
+            </div>
+            <span id="val-battery" class="battery-pct">--%</span>
+        </div>
+    </section>
+
+    <!-- 2D 위치 맵 -->
+    <section class="card" id="card-map">
+        <h2>실시간 위치 맵</h2>
+        <canvas id="map-canvas" width="340" height="340"></canvas>
+    </section>
+
+    <!-- 속도 추이 그래프 -->
+    <section class="card" id="card-speed">
+        <h2>속도 추이 (최근 60s)</h2>
+        <canvas id="speed-chart"></canvas>
+    </section>
+
+    <!-- 오늘 통계 -->
+    <section class="card" id="card-stats">
+        <h2>오늘 통계</h2>
+        <div class="stat-grid">
+            <div class="stat-item">
+                <div class="stat-val" id="stat-distance">--</div>
+                <div class="stat-label">주행 거리 (m)</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-val" id="stat-uptime">--</div>
+                <div class="stat-label">가동 시간 (s)</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 이벤트 로그 -->
+    <section class="card" id="card-events">
+        <h2>이벤트 로그</h2>
+        <ul id="event-list" class="event-list"></ul>
+    </section>
+
+</main>
+
+<script th:inline="javascript">
+    const ROBOT_ID = [[${robotId}]];
+
+    // ── WebSocket / STOMP 연결 ─────────────────────────────────────────
+    let stompClient = null;
+
+    function connect() {
+        const socket = new SockJS('/ws');
+        stompClient = Stomp.over(socket);
+        stompClient.debug = null; // 콘솔 노이즈 제거
+
+        stompClient.connect({}, () => {
+            document.getElementById('conn-status').textContent = 'CONNECTED';
+            document.getElementById('conn-status').className = 'badge badge-connected';
+
+            // 실시간 상태 구독
+            stompClient.subscribe(`/topic/robot/${ROBOT_ID}/status`, (msg) => {
+                updateStatus(JSON.parse(msg.body));
+            });
+
+            // 이벤트 구독
+            stompClient.subscribe(`/topic/robot/${ROBOT_ID}/event`, (msg) => {
+                addEventLog(JSON.parse(msg.body));
+            });
+
+            loadTodayStats();
+        }, () => {
+            document.getElementById('conn-status').textContent = 'DISCONNECTED';
+            document.getElementById('conn-status').className = 'badge badge-disconnected';
+            setTimeout(connect, 3000);
+        });
+    }
+
+    // ── 상태 업데이트 ──────────────────────────────────────────────────
+    function updateStatus(data) {
+        document.getElementById('val-pos-x').textContent   = data.posX.toFixed(3);
+        document.getElementById('val-pos-y').textContent   = data.posY.toFixed(3);
+        document.getElementById('val-linear').textContent  = data.linearVel.toFixed(3);
+        document.getElementById('val-angular').textContent = data.angularVel.toFixed(3);
+        document.getElementById('val-last-time').textContent = new Date().toLocaleTimeString();
+
+        updateBattery(data.battery);
+        updateMap(data.posX, data.posY);
+        updateSpeedChart(data.linearVel);
+    }
+
+    // ── 배터리 ─────────────────────────────────────────────────────────
+    function updateBattery(pct) {
+        document.getElementById('val-battery').textContent = pct + '%';
+        const fill = document.getElementById('battery-fill');
+        fill.style.width = pct + '%';
+        fill.style.backgroundColor = pct > 50 ? '#4caf50' : pct > 20 ? '#ff9800' : '#f44336';
+    }
+
+    // ── 2D 맵 ──────────────────────────────────────────────────────────
+    const mapCanvas = document.getElementById('map-canvas');
+    const mapCtx = mapCanvas.getContext('2d');
+    const PATH_COLOR = '#00bcd4';
+    const ROBOT_COLOR = '#ff5722';
+    const MAP_SCALE = 30; // 1m = 30px
+    const MAP_CENTER_X = mapCanvas.width / 2;
+    const MAP_CENTER_Y = mapCanvas.height / 2;
+    const pathPoints = [];
+
+    function updateMap(x, y) {
+        const px = MAP_CENTER_X + x * MAP_SCALE;
+        const py = MAP_CENTER_Y - y * MAP_SCALE;
+        pathPoints.push({ px, py });
+        if (pathPoints.length > 500) pathPoints.shift();
+
+        mapCtx.clearRect(0, 0, mapCanvas.width, mapCanvas.height);
+
+        // 격자
+        mapCtx.strokeStyle = '#2a2a3e';
+        mapCtx.lineWidth = 0.5;
+        for (let i = 0; i < mapCanvas.width; i += MAP_SCALE) {
+            mapCtx.beginPath(); mapCtx.moveTo(i, 0); mapCtx.lineTo(i, mapCanvas.height); mapCtx.stroke();
+        }
+        for (let j = 0; j < mapCanvas.height; j += MAP_SCALE) {
+            mapCtx.beginPath(); mapCtx.moveTo(0, j); mapCtx.lineTo(mapCanvas.width, j); mapCtx.stroke();
+        }
+
+        // 경로
+        if (pathPoints.length > 1) {
+            mapCtx.beginPath();
+            mapCtx.strokeStyle = PATH_COLOR;
+            mapCtx.lineWidth = 2;
+            mapCtx.moveTo(pathPoints[0].px, pathPoints[0].py);
+            pathPoints.forEach(p => mapCtx.lineTo(p.px, p.py));
+            mapCtx.stroke();
+        }
+
+        // 로봇
+        const last = pathPoints[pathPoints.length - 1];
+        mapCtx.beginPath();
+        mapCtx.arc(last.px, last.py, 7, 0, Math.PI * 2);
+        mapCtx.fillStyle = ROBOT_COLOR;
+        mapCtx.fill();
+    }
+
+    // ── 속도 차트 ──────────────────────────────────────────────────────
+    const speedLabels = [];
+    const speedData = [];
+    const speedChart = new Chart(document.getElementById('speed-chart'), {
+        type: 'line',
+        data: {
+            labels: speedLabels,
+            datasets: [{
+                label: '선속도 (m/s)',
+                data: speedData,
+                borderColor: '#00bcd4',
+                backgroundColor: 'rgba(0,188,212,0.1)',
+                tension: 0.3,
+                pointRadius: 0,
+                fill: true
+            }]
+        },
+        options: {
+            animation: false,
+            scales: {
+                x: { ticks: { color: '#aaa', maxTicksLimit: 6 }, grid: { color: '#2a2a3e' } },
+                y: { ticks: { color: '#aaa' }, grid: { color: '#2a2a3e' }, min: -0.5, max: 1.0 }
+            },
+            plugins: { legend: { labels: { color: '#aaa' } } }
+        }
+    });
+
+    function updateSpeedChart(vel) {
+        const now = new Date().toLocaleTimeString();
+        speedLabels.push(now);
+        speedData.push(vel);
+        if (speedLabels.length > 60) { speedLabels.shift(); speedData.shift(); }
+        speedChart.update();
+    }
+
+    // ── 오늘 통계 ──────────────────────────────────────────────────────
+    function loadTodayStats() {
+        fetch(`/api/robot/${ROBOT_ID}/stats/today`)
+            .then(r => r.json())
+            .then(d => {
+                document.getElementById('stat-distance').textContent = d.totalDistanceM;
+                document.getElementById('stat-uptime').textContent   = d.activeSeconds;
+            });
+    }
+    setInterval(loadTodayStats, 10000);
+
+    // ── 이벤트 로그 ────────────────────────────────────────────────────
+    function addEventLog(event) {
+        const list = document.getElementById('event-list');
+        const li = document.createElement('li');
+        li.className = 'event-item event-' + event.eventType.toLowerCase();
+        li.textContent = `[${new Date().toLocaleTimeString()}] ${event.eventType} — ${event.message}`;
+        list.prepend(li);
+        if (list.children.length > 20) list.removeChild(list.lastChild);
+    }
+
+    // ── 시계 ───────────────────────────────────────────────────────────
+    function updateClock() {
+        document.getElementById('clock').textContent = new Date().toLocaleString('ko-KR');
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // 시작
+    connect();
+</script>
+
+</body>
+</html>
