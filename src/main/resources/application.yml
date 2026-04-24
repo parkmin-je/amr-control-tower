@@ -32,11 +32,14 @@ kafka:
     robot-status: robot-status
     robot-event: robot-event
 
-# ROS rosbridge 연결 설정
+# ROS rosbridge 연결 설정 (로봇별 rosbridge URI 지정)
 rosbridge:
-  uri: ws://localhost:9090
   reconnect-delay-ms: 3000
-  robot-id: robot-01
+  robots:
+    - robot-id: robot-01
+      uri: ws://localhost:9090
+    - robot-id: robot-02
+      uri: ws://localhost:9091
 
 # 로봇 상태 저장 주기 (ms)
 robot:

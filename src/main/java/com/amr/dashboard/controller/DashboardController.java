@@ -14,7 +14,7 @@ public class DashboardController {
 
     @GetMapping("/")
     public String dashboard(Model model) {
-        model.addAttribute("robotId", rosBridgeConfig.getRobotId());
+        model.addAttribute("robots", rosBridgeConfig.getRobots());
         return "dashboard";
     }
 }
