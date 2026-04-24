@@ -14,6 +14,24 @@ spring:
       hibernate:
         format_sql: true
 
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: amr-dashboard
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      auto-offset-reset: latest
+      properties:
+        spring.json.trusted.packages: "com.amr.dashboard.kafka.dto"
+
+kafka:
+  topics:
+    robot-status: robot-status
+    robot-event: robot-event
+
 # ROS rosbridge 연결 설정
 rosbridge:
   uri: ws://localhost:9090
