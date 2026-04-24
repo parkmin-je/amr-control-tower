@@ -5,6 +5,9 @@ import com.amr.dashboard.domain.RobotEvent;
 import com.amr.dashboard.domain.RobotEventRepository;
 import com.amr.dashboard.domain.RobotStatus;
 import com.amr.dashboard.domain.RobotStatusRepository;
+import com.amr.dashboard.kafka.RobotStatusProducer;
+import com.amr.dashboard.kafka.dto.RobotEventDto;
+import com.amr.dashboard.kafka.dto.RobotStatusDto;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
@@ -23,11 +27,12 @@ import java.util.concurrent.ConcurrentHashMap;
 public class RobotStatusService {
 
     private final RosBridgeConfig rosBridgeConfig;
+    private final Optional<RobotStatusProducer> producer;
     private final RobotStatusRepository statusRepository;
     private final RobotEventRepository eventRepository;
     private final SimpMessagingTemplate messagingTemplate;
 
-    // 최신 상태를 메모리에 캐싱 (DB 저장은 1초 주기 스케줄러에서)
+    // 최신 상태를 메모리에 캐싱
     private final Map<String, RobotStatusCache> cache = new ConcurrentHashMap<>();
 
     // /odom 메시지 처리
@@ -43,7 +48,7 @@ public class RobotStatusService {
         current.linearVel = twist.path("linear").path("x").asDouble();
         current.angularVel = twist.path("angular").path("z").asDouble();
 
-        pushToFront(robotId, current);
+        publishStatus(robotId, current);
     }
 
     // /battery_state 메시지 처리
@@ -56,70 +61,77 @@ public class RobotStatusService {
 
         // 배터리 20% 이하 이벤트
         if (current.battery <= 20 && !current.lowBatteryAlerted) {
-            saveEvent(robotId, RobotEvent.EventType.LOW_BATTERY,
-                    "배터리 부족: " + current.battery + "%");
+            publishEvent(robotId, RobotEvent.EventType.LOW_BATTERY, "배터리 부족: " + current.battery + "%");
             current.lowBatteryAlerted = true;
         } else if (current.battery > 20) {
             current.lowBatteryAlerted = false;
         }
 
-        pushToFront(robotId, current);
+        publishStatus(robotId, current);
     }
 
-    // WebSocket으로 프론트에 실시간 푸시
-    private void pushToFront(String robotId, RobotStatusCache c) {
-        Map<String, Object> payload = Map.of(
-                "robotId", robotId,
-                "timestamp", LocalDateTime.now().toString(),
-                "posX", c.posX,
-                "posY", c.posY,
-                "linearVel", c.linearVel,
-                "angularVel", c.angularVel,
-                "battery", c.battery
-        );
-        messagingTemplate.convertAndSend("/topic/robot/" + robotId + "/status", payload);
+    // Kafka가 있으면 Kafka로, 없으면(dev) 직접 WebSocket 푸시
+    private void publishStatus(String robotId, RobotStatusCache c) {
+        RobotStatusDto dto = RobotStatusDto.builder()
+                .robotId(robotId)
+                .timestamp(LocalDateTime.now().toString())
+                .posX(c.posX)
+                .posY(c.posY)
+                .linearVel(c.linearVel)
+                .angularVel(c.angularVel)
+                .battery(c.battery)
+                .build();
+
+        if (producer.isPresent()) {
+            producer.get().sendStatus(dto);
+        } else {
+            messagingTemplate.convertAndSend("/topic/robot/" + robotId + "/status", dto);
+        }
     }
 
-    // 1초마다 DB 저장 (프론트 푸시와 분리)
+    public void publishEvent(String robotId, RobotEvent.EventType type, String message) {
+        RobotEventDto dto = RobotEventDto.builder()
+                .robotId(robotId)
+                .timestamp(LocalDateTime.now().toString())
+                .eventType(type.name())
+                .message(message)
+                .build();
+
+        if (producer.isPresent()) {
+            producer.get().sendEvent(dto);
+        } else {
+            saveEventDirect(robotId, type, message);
+            messagingTemplate.convertAndSend("/topic/robot/" + robotId + "/event", dto);
+        }
+    }
+
+    // dev 환경 전용: Kafka 없이 직접 DB 저장
     @Scheduled(fixedRateString = "${robot.status-save-interval-ms}")
     @Transactional
     public void saveStatusPeriodically() {
-        cache.forEach((robotId, c) -> {
-            RobotStatus status = RobotStatus.builder()
-                    .robotId(robotId)
-                    .recordedAt(LocalDateTime.now())
-                    .posX(c.posX)
-                    .posY(c.posY)
-                    .linearVel(c.linearVel)
-                    .angularVel(c.angularVel)
-                    .battery(c.battery)
-                    .build();
-            statusRepository.save(status);
-        });
+        if (producer.isPresent()) return; // prod에선 Consumer가 저장
+        cache.forEach((robotId, c) -> statusRepository.save(RobotStatus.builder()
+                .robotId(robotId)
+                .recordedAt(LocalDateTime.now())
+                .posX(c.posX)
+                .posY(c.posY)
+                .linearVel(c.linearVel)
+                .angularVel(c.angularVel)
+                .battery(c.battery)
+                .build()));
     }
 
     @Transactional
-    public void saveEvent(String robotId, RobotEvent.EventType type, String message) {
-        RobotEvent event = RobotEvent.builder()
+    public void saveEventDirect(String robotId, RobotEvent.EventType type, String message) {
+        eventRepository.save(RobotEvent.builder()
                 .robotId(robotId)
                 .occurredAt(LocalDateTime.now())
                 .eventType(type)
                 .message(message)
-                .build();
-        eventRepository.save(event);
+                .build());
         log.info("[Event] robotId={}, type={}, message={}", robotId, type, message);
-
-        // 이벤트도 프론트에 실시간 푸시
-        Map<String, Object> payload = Map.of(
-                "robotId", robotId,
-                "timestamp", LocalDateTime.now().toString(),
-                "eventType", type.name(),
-                "message", message
-        );
-        messagingTemplate.convertAndSend("/topic/robot/" + robotId + "/event", payload);
     }
 
-    // 내부 캐시 객체
     private static class RobotStatusCache {
         String robotId;
         double posX, posY, linearVel, angularVel;
