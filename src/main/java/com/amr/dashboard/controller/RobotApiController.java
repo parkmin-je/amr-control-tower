@@ -1,5 +1,6 @@
 package com.amr.dashboard.controller;
 
+import com.amr.dashboard.config.RosBridgeConfig;
 import com.amr.dashboard.domain.RobotEvent;
 import com.amr.dashboard.domain.RobotEventRepository;
 import com.amr.dashboard.domain.RobotStatus;
@@ -22,6 +23,16 @@ public class RobotApiController {
     private final RobotStatusRepository statusRepository;
     private final RobotEventRepository eventRepository;
     private final RobotStatsService statsService;
+    private final RosBridgeConfig rosBridgeConfig;
+
+    // 활성 로봇 목록
+    @GetMapping("/list")
+    public ResponseEntity<List<String>> getRobotList() {
+        List<String> robotIds = rosBridgeConfig.getRobots().stream()
+                .map(RosBridgeConfig.RobotConnection::getRobotId)
+                .toList();
+        return ResponseEntity.ok(robotIds);
+    }
 
     // 최신 상태 1건
     @GetMapping("/{robotId}/status")

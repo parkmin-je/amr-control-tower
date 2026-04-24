@@ -1,6 +1,5 @@
 package com.amr.dashboard.service;
 
-import com.amr.dashboard.config.RosBridgeConfig;
 import com.amr.dashboard.domain.RobotEvent;
 import com.amr.dashboard.domain.RobotEventRepository;
 import com.amr.dashboard.domain.RobotStatus;
@@ -26,7 +25,6 @@ import java.util.concurrent.ConcurrentHashMap;
 @RequiredArgsConstructor
 public class RobotStatusService {
 
-    private final RosBridgeConfig rosBridgeConfig;
     private final Optional<RobotStatusProducer> producer;
     private final RobotStatusRepository statusRepository;
     private final RobotEventRepository eventRepository;
@@ -36,8 +34,7 @@ public class RobotStatusService {
     private final Map<String, RobotStatusCache> cache = new ConcurrentHashMap<>();
 
     // /odom 메시지 처리
-    public void onOdom(JsonNode msg) {
-        String robotId = rosBridgeConfig.getRobotId();
+    public void onOdom(String robotId, JsonNode msg) {
         RobotStatusCache current = cache.computeIfAbsent(robotId, RobotStatusCache::new);
 
         JsonNode pose = msg.path("pose").path("pose");
@@ -52,8 +49,7 @@ public class RobotStatusService {
     }
 
     // /battery_state 메시지 처리
-    public void onBattery(JsonNode msg) {
-        String robotId = rosBridgeConfig.getRobotId();
+    public void onBattery(String robotId, JsonNode msg) {
         RobotStatusCache current = cache.computeIfAbsent(robotId, RobotStatusCache::new);
 
         double percentage = msg.path("percentage").asDouble(1.0);

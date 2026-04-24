@@ -1,19 +1,26 @@
 package com.amr.dashboard.config;
 
 import lombok.Getter;
-import org.springframework.beans.factory.annotation.Value;
+import lombok.Setter;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Getter
+@Setter
 @Configuration
+@ConfigurationProperties(prefix = "rosbridge")
 public class RosBridgeConfig {
 
-    @Value("${rosbridge.uri}")
-    private String uri;
+    private long reconnectDelayMs = 3000;
+    private List<RobotConnection> robots = new ArrayList<>();
 
-    @Value("${rosbridge.reconnect-delay-ms}")
-    private long reconnectDelayMs;
-
-    @Value("${rosbridge.robot-id}")
-    private String robotId;
+    @Getter
+    @Setter
+    public static class RobotConnection {
+        private String robotId;
+        private String uri;
+    }
 }
