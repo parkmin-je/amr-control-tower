@@ -24,7 +24,6 @@
             th:id="'tab-' + ${robot.robotId}"
             th:text="${robot.robotId}"
             th:classappend="${stat.first} ? ' active' : ''"
-            th:attr="data-robot-id=${robot.robotId}"
             class="tab-btn">
     </button>
 </nav>
@@ -309,7 +308,7 @@
     document.getElementById('clock').textContent = new Date().toLocaleString('ko-KR');
 
     document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.addEventListener('click', () => selectRobot(btn.dataset.robotId));
+        btn.addEventListener('click', () => selectRobot(btn.id.replace('tab-', '')));
     });
 
     connect();
