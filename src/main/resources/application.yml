@@ -2,28 +2,17 @@ spring:
   application:
     name: amr-dashboard
 
-  # 개발: H2 인메모리 DB (MySQL 없어도 바로 실행 가능)
-  datasource:
-    url: jdbc:h2:mem:amrdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
+  profiles:
+    active: dev
 
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
+  thymeleaf:
+    cache: false
 
   jpa:
-    hibernate:
-      ddl-auto: create-drop
     show-sql: true
     properties:
       hibernate:
         format_sql: true
-
-  thymeleaf:
-    cache: false
 
 # ROS rosbridge 연결 설정
 rosbridge:
