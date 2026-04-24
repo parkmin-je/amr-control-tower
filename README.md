@@ -165,9 +165,21 @@ rosbridge:
 
 ---
 
-## 향후 계획
+## 개발 현황
 
-- [ ] ROS2 TurtleBot3 멀티 로봇 시뮬레이션 연동
+### 미니 프로젝트 (완료)
+- [x] RosBridgeClient — rosbridge WebSocket 연결 및 토픽 구독
+- [x] 멀티 로봇 Fleet 지원 (RosBridgeConfig, RosBridgeManager)
+- [x] 실시간 WebSocket 상태 푸시 (STOMP)
+- [x] JPA + H2/MySQL 상태·이벤트 저장
+- [x] Kafka 이벤트 파이프라인 (prod 프로파일)
+- [x] 대시보드 UI — 2D 맵, 속도 차트, 배터리, 통계
+- [x] Docker Compose 풀스택 배포
+
+### 파이널 프로젝트 (진행 중)
+- [ ] Ubuntu 22.04 + ROS2 Humble 환경 구축
+- [ ] TurtleBot3 Gazebo 시뮬레이션 연동
+- [ ] rosbridge → Spring Boot 실제 데이터 연결
 - [ ] YOLO 기반 장애물 감지 Python 노드 연동
 - [ ] 알림 설정 (배터리 임계값, 이벤트 타입별 필터)
 - [ ] 로봇별 운행 경로 히스토리 재생
