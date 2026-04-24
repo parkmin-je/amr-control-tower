@@ -2,23 +2,32 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>AMR 관제 대시보드</title>
+    <title>AMR Fleet 관제 대시보드</title>
     <link rel="stylesheet" th:href="@{/css/dashboard.css}">
-    <!-- SockJS + STOMP -->
     <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
 
 <header class="header">
-    <h1>AMR 관제 대시보드</h1>
+    <h1>AMR Fleet 관제 대시보드</h1>
     <div class="header-right">
         <span id="conn-status" class="badge badge-disconnected">DISCONNECTED</span>
         <span id="clock"></span>
     </div>
 </header>
+
+<!-- 로봇 선택 탭 -->
+<nav class="robot-tabs">
+    <button th:each="robot, stat : ${robots}"
+            th:id="'tab-' + ${robot.robotId}"
+            th:text="${robot.robotId}"
+            th:classappend="${stat.first} ? ' active' : ''"
+            th:attr="data-robot-id=${robot.robotId}"
+            class="tab-btn">
+    </button>
+</nav>
 
 <main class="grid">
 
@@ -26,7 +35,7 @@
     <section class="card" id="card-info">
         <h2>로봇 정보</h2>
         <table class="info-table">
-            <tr><td>Robot ID</td><td id="val-robot-id" th:text="${robotId}">-</td></tr>
+            <tr><td>Robot ID</td><td id="val-robot-id">-</td></tr>
             <tr><td>위치 X</td><td><span id="val-pos-x">-</span> m</td></tr>
             <tr><td>위치 Y</td><td><span id="val-pos-y">-</span> m</td></tr>
             <tr><td>선속도</td><td><span id="val-linear">-</span> m/s</td></tr>
@@ -73,6 +82,17 @@
         </div>
     </section>
 
+    <!-- 주간/월간 차트 -->
+    <section class="card" id="card-history">
+        <h2>주행 거리 추이
+            <span class="chart-tabs">
+                <button class="chart-tab active" onclick="switchChart('weekly', this)">주간</button>
+                <button class="chart-tab" onclick="switchChart('monthly', this)">월간</button>
+            </span>
+        </h2>
+        <canvas id="history-chart"></canvas>
+    </section>
+
     <!-- 이벤트 로그 -->
     <section class="card" id="card-events">
         <h2>이벤트 로그</h2>
@@ -82,7 +102,12 @@
 </main>
 
 <script th:inline="javascript">
-    const ROBOT_ID = [[${robotId}]];
+    const ROBOTS = /*[[${robots}]]*/ [];
+    let currentRobotId = ROBOTS.length > 0 ? ROBOTS[0].robotId : 'robot-01';
+
+    // 로봇별 구독 해제 함수 저장
+    let statusSub = null;
+    let eventSub = null;
 
     // ── WebSocket / STOMP 연결 ─────────────────────────────────────────
     let stompClient = null;
@@ -90,28 +115,44 @@
     function connect() {
         const socket = new SockJS('/ws');
         stompClient = Stomp.over(socket);
-        stompClient.debug = null; // 콘솔 노이즈 제거
+        stompClient.debug = null;
 
         stompClient.connect({}, () => {
             document.getElementById('conn-status').textContent = 'CONNECTED';
             document.getElementById('conn-status').className = 'badge badge-connected';
-
-            // 실시간 상태 구독
-            stompClient.subscribe(`/topic/robot/${ROBOT_ID}/status`, (msg) => {
-                updateStatus(JSON.parse(msg.body));
-            });
-
-            // 이벤트 구독
-            stompClient.subscribe(`/topic/robot/${ROBOT_ID}/event`, (msg) => {
-                addEventLog(JSON.parse(msg.body));
-            });
-
+            subscribeRobot(currentRobotId);
             loadTodayStats();
+            loadHistoryChart('weekly');
         }, () => {
             document.getElementById('conn-status').textContent = 'DISCONNECTED';
             document.getElementById('conn-status').className = 'badge badge-disconnected';
             setTimeout(connect, 3000);
         });
+    }
+
+    function subscribeRobot(robotId) {
+        if (statusSub) statusSub.unsubscribe();
+        if (eventSub) eventSub.unsubscribe();
+
+        document.getElementById('val-robot-id').textContent = robotId;
+        pathPoints.length = 0;
+
+        statusSub = stompClient.subscribe(`/topic/robot/${robotId}/status`, (msg) => {
+            updateStatus(JSON.parse(msg.body));
+        });
+        eventSub = stompClient.subscribe(`/topic/robot/${robotId}/event`, (msg) => {
+            addEventLog(JSON.parse(msg.body));
+        });
+    }
+
+    function selectRobot(robotId) {
+        currentRobotId = robotId;
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('tab-' + robotId).classList.add('active');
+        subscribeRobot(robotId);
+        loadTodayStats();
+        loadHistoryChart(currentChartMode);
+        document.getElementById('event-list').innerHTML = '';
     }
 
     // ── 상태 업데이트 ──────────────────────────────────────────────────
@@ -121,7 +162,6 @@
         document.getElementById('val-linear').textContent  = data.linearVel.toFixed(3);
         document.getElementById('val-angular').textContent = data.angularVel.toFixed(3);
         document.getElementById('val-last-time').textContent = new Date().toLocaleTimeString();
-
         updateBattery(data.battery);
         updateMap(data.posX, data.posY);
         updateSpeedChart(data.linearVel);
@@ -138,9 +178,7 @@
     // ── 2D 맵 ──────────────────────────────────────────────────────────
     const mapCanvas = document.getElementById('map-canvas');
     const mapCtx = mapCanvas.getContext('2d');
-    const PATH_COLOR = '#00bcd4';
-    const ROBOT_COLOR = '#ff5722';
-    const MAP_SCALE = 30; // 1m = 30px
+    const MAP_SCALE = 30;
     const MAP_CENTER_X = mapCanvas.width / 2;
     const MAP_CENTER_Y = mapCanvas.height / 2;
     const pathPoints = [];
@@ -152,8 +190,6 @@
         if (pathPoints.length > 500) pathPoints.shift();
 
         mapCtx.clearRect(0, 0, mapCanvas.width, mapCanvas.height);
-
-        // 격자
         mapCtx.strokeStyle = '#2a2a3e';
         mapCtx.lineWidth = 0.5;
         for (let i = 0; i < mapCanvas.width; i += MAP_SCALE) {
@@ -162,22 +198,18 @@
         for (let j = 0; j < mapCanvas.height; j += MAP_SCALE) {
             mapCtx.beginPath(); mapCtx.moveTo(0, j); mapCtx.lineTo(mapCanvas.width, j); mapCtx.stroke();
         }
-
-        // 경로
         if (pathPoints.length > 1) {
             mapCtx.beginPath();
-            mapCtx.strokeStyle = PATH_COLOR;
+            mapCtx.strokeStyle = '#00bcd4';
             mapCtx.lineWidth = 2;
             mapCtx.moveTo(pathPoints[0].px, pathPoints[0].py);
             pathPoints.forEach(p => mapCtx.lineTo(p.px, p.py));
             mapCtx.stroke();
         }
-
-        // 로봇
         const last = pathPoints[pathPoints.length - 1];
         mapCtx.beginPath();
         mapCtx.arc(last.px, last.py, 7, 0, Math.PI * 2);
-        mapCtx.fillStyle = ROBOT_COLOR;
+        mapCtx.fillStyle = '#ff5722';
         mapCtx.fill();
     }
 
@@ -188,15 +220,8 @@
         type: 'line',
         data: {
             labels: speedLabels,
-            datasets: [{
-                label: '선속도 (m/s)',
-                data: speedData,
-                borderColor: '#00bcd4',
-                backgroundColor: 'rgba(0,188,212,0.1)',
-                tension: 0.3,
-                pointRadius: 0,
-                fill: true
-            }]
+            datasets: [{ label: '선속도 (m/s)', data: speedData, borderColor: '#00bcd4',
+                backgroundColor: 'rgba(0,188,212,0.1)', tension: 0.3, pointRadius: 0, fill: true }]
         },
         options: {
             animation: false,
@@ -209,16 +234,56 @@
     });
 
     function updateSpeedChart(vel) {
-        const now = new Date().toLocaleTimeString();
-        speedLabels.push(now);
+        speedLabels.push(new Date().toLocaleTimeString());
         speedData.push(vel);
         if (speedLabels.length > 60) { speedLabels.shift(); speedData.shift(); }
         speedChart.update();
     }
 
+    // ── 주간/월간 히스토리 차트 ─────────────────────────────────────────
+    let currentChartMode = 'weekly';
+    let historyChart = null;
+
+    function loadHistoryChart(mode) {
+        currentChartMode = mode;
+        fetch(`/api/robot/${currentRobotId}/stats/${mode}`)
+            .then(r => r.json())
+            .then(d => renderHistoryChart(d.labels, d.distances, mode));
+    }
+
+    function renderHistoryChart(labels, distances, mode) {
+        if (historyChart) historyChart.destroy();
+        historyChart = new Chart(document.getElementById('history-chart'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: '주행 거리 (m)',
+                    data: distances,
+                    backgroundColor: 'rgba(0,188,212,0.6)',
+                    borderColor: '#00bcd4',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    x: { ticks: { color: '#aaa' }, grid: { color: '#2a2a3e' } },
+                    y: { ticks: { color: '#aaa' }, grid: { color: '#2a2a3e' }, beginAtZero: true }
+                },
+                plugins: { legend: { labels: { color: '#aaa' } } }
+            }
+        });
+    }
+
+    function switchChart(mode, btn) {
+        document.querySelectorAll('.chart-tab').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        loadHistoryChart(mode);
+    }
+
     // ── 오늘 통계 ──────────────────────────────────────────────────────
     function loadTodayStats() {
-        fetch(`/api/robot/${ROBOT_ID}/stats/today`)
+        fetch(`/api/robot/${currentRobotId}/stats/today`)
             .then(r => r.json())
             .then(d => {
                 document.getElementById('stat-distance').textContent = d.totalDistanceM;
@@ -238,13 +303,15 @@
     }
 
     // ── 시계 ───────────────────────────────────────────────────────────
-    function updateClock() {
+    setInterval(() => {
         document.getElementById('clock').textContent = new Date().toLocaleString('ko-KR');
-    }
-    setInterval(updateClock, 1000);
-    updateClock();
+    }, 1000);
+    document.getElementById('clock').textContent = new Date().toLocaleString('ko-KR');
 
-    // 시작
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => selectRobot(btn.dataset.robotId));
+    });
+
     connect();
 </script>
 

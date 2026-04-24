@@ -48,6 +48,18 @@ public class RobotApiController {
         return ResponseEntity.ok(statsService.getTodayStats(robotId));
     }
 
+    // 주간 통계 (최근 7일 일별 주행 거리)
+    @GetMapping("/{robotId}/stats/weekly")
+    public ResponseEntity<Map<String, Object>> getWeeklyStats(@PathVariable String robotId) {
+        return ResponseEntity.ok(statsService.getWeeklyStats(robotId));
+    }
+
+    // 월간 통계 (최근 30일 일별 주행 거리)
+    @GetMapping("/{robotId}/stats/monthly")
+    public ResponseEntity<Map<String, Object>> getMonthlyStats(@PathVariable String robotId) {
+        return ResponseEntity.ok(statsService.getMonthlyStats(robotId));
+    }
+
     // 기간별 이력
     @GetMapping("/{robotId}/history")
     public ResponseEntity<List<RobotStatus>> getHistory(
