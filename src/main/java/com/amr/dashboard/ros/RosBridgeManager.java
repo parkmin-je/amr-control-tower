@@ -34,7 +34,10 @@ public class RosBridgeManager {
                     robot.getRobotId(),
                     robot.getUri(),
                     config.getReconnectDelayMs(),
-                    robotStatusService
+                    robotStatusService,
+                    robot.getOdomTopic(),
+                    robot.getBatteryTopic(),
+                    robot.getMapTopic()
             );
             clients.add(client);
             client.start();
