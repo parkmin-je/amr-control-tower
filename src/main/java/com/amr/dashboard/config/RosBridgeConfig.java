@@ -22,5 +22,8 @@ public class RosBridgeConfig {
     public static class RobotConnection {
         private String robotId;
         private String uri;
+        private String odomTopic = "/odom";
+        private String batteryTopic = "/battery_state";
+        private String mapTopic = "/map";
     }
 }

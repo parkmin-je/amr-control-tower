@@ -37,9 +37,15 @@ rosbridge:
   reconnect-delay-ms: 3000
   robots:
     - robot-id: robot-01
-      uri: ws://localhost:9090
+      uri: ws://192.168.109.130:9090
+      odom-topic: /odom
+      battery-topic: /battery_state
+      map-topic: /map
     - robot-id: robot-02
-      uri: ws://localhost:9091
+      uri: ws://192.168.109.130:9091
+      odom-topic: /odom
+      battery-topic: /battery_state
+      map-topic: /map
 
 # 로봇 상태 저장 주기 (ms)
 robot:

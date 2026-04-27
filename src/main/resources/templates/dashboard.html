@@ -107,6 +107,11 @@
     // 로봇별 구독 해제 함수 저장
     let statusSub = null;
     let eventSub = null;
+    let mapSub = null;
+
+    // 맵 상태
+    let mapImage = null;
+    let mapInfo = null;
 
     // ── WebSocket / STOMP 연결 ─────────────────────────────────────────
     let stompClient = null;
@@ -132,15 +137,22 @@
     function subscribeRobot(robotId) {
         if (statusSub) statusSub.unsubscribe();
         if (eventSub) eventSub.unsubscribe();
+        if (mapSub) mapSub.unsubscribe();
 
         document.getElementById('val-robot-id').textContent = robotId;
         pathPoints.length = 0;
+        mapImage = null;
+        mapInfo = null;
 
         statusSub = stompClient.subscribe(`/topic/robot/${robotId}/status`, (msg) => {
             updateStatus(JSON.parse(msg.body));
         });
         eventSub = stompClient.subscribe(`/topic/robot/${robotId}/event`, (msg) => {
             addEventLog(JSON.parse(msg.body));
+        });
+        mapSub = stompClient.subscribe(`/topic/robot/${robotId}/map`, (msg) => {
+            mapInfo = JSON.parse(msg.body);
+            loadMapImage(robotId);
         });
     }
 
@@ -182,21 +194,40 @@
     const MAP_CENTER_Y = mapCanvas.height / 2;
     const pathPoints = [];
 
-    function updateMap(x, y) {
-        const px = MAP_CENTER_X + x * MAP_SCALE;
-        const py = MAP_CENTER_Y - y * MAP_SCALE;
-        pathPoints.push({ px, py });
-        if (pathPoints.length > 500) pathPoints.shift();
+    function loadMapImage(robotId) {
+        const img = new Image();
+        img.onload = () => { mapImage = img; redrawMap(); };
+        img.src = `/api/robot/${robotId}/map?t=${Date.now()}`;
+    }
 
+    function worldToCanvas(x, y) {
+        if (!mapInfo) {
+            return { px: MAP_CENTER_X + x * MAP_SCALE, py: MAP_CENTER_Y - y * MAP_SCALE };
+        }
+        const mapPxX = (x - mapInfo.originX) / mapInfo.resolution;
+        const mapPxY = mapInfo.height - (y - mapInfo.originY) / mapInfo.resolution;
+        return {
+            px: (mapPxX / mapInfo.width) * mapCanvas.width,
+            py: (mapPxY / mapInfo.height) * mapCanvas.height
+        };
+    }
+
+    function redrawMap() {
         mapCtx.clearRect(0, 0, mapCanvas.width, mapCanvas.height);
-        mapCtx.strokeStyle = '#2a2a3e';
-        mapCtx.lineWidth = 0.5;
-        for (let i = 0; i < mapCanvas.width; i += MAP_SCALE) {
-            mapCtx.beginPath(); mapCtx.moveTo(i, 0); mapCtx.lineTo(i, mapCanvas.height); mapCtx.stroke();
+
+        if (mapImage && mapInfo) {
+            mapCtx.drawImage(mapImage, 0, 0, mapCanvas.width, mapCanvas.height);
+        } else {
+            mapCtx.strokeStyle = '#2a2a3e';
+            mapCtx.lineWidth = 0.5;
+            for (let i = 0; i < mapCanvas.width; i += MAP_SCALE) {
+                mapCtx.beginPath(); mapCtx.moveTo(i, 0); mapCtx.lineTo(i, mapCanvas.height); mapCtx.stroke();
+            }
+            for (let j = 0; j < mapCanvas.height; j += MAP_SCALE) {
+                mapCtx.beginPath(); mapCtx.moveTo(0, j); mapCtx.lineTo(mapCanvas.width, j); mapCtx.stroke();
+            }
         }
-        for (let j = 0; j < mapCanvas.height; j += MAP_SCALE) {
-            mapCtx.beginPath(); mapCtx.moveTo(0, j); mapCtx.lineTo(mapCanvas.width, j); mapCtx.stroke();
-        }
+
         if (pathPoints.length > 1) {
             mapCtx.beginPath();
             mapCtx.strokeStyle = '#00bcd4';
@@ -205,11 +236,21 @@
             pathPoints.forEach(p => mapCtx.lineTo(p.px, p.py));
             mapCtx.stroke();
         }
-        const last = pathPoints[pathPoints.length - 1];
-        mapCtx.beginPath();
-        mapCtx.arc(last.px, last.py, 7, 0, Math.PI * 2);
-        mapCtx.fillStyle = '#ff5722';
-        mapCtx.fill();
+
+        if (pathPoints.length > 0) {
+            const last = pathPoints[pathPoints.length - 1];
+            mapCtx.beginPath();
+            mapCtx.arc(last.px, last.py, 7, 0, Math.PI * 2);
+            mapCtx.fillStyle = '#ff5722';
+            mapCtx.fill();
+        }
+    }
+
+    function updateMap(x, y) {
+        const { px, py } = worldToCanvas(x, y);
+        pathPoints.push({ px, py });
+        if (pathPoints.length > 500) pathPoints.shift();
+        redrawMap();
     }
 
     // ── 속도 차트 ──────────────────────────────────────────────────────

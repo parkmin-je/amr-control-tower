@@ -19,17 +19,24 @@ public class RosBridgeClient {
     private final String uri;
     private final long reconnectDelayMs;
     private final RobotStatusService robotStatusService;
+    private final String odomTopic;
+    private final String batteryTopic;
+    private final String mapTopic;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private WebSocketClient wsClient;
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 
     public RosBridgeClient(String robotId, String uri, long reconnectDelayMs,
-                           RobotStatusService robotStatusService) {
+                           RobotStatusService robotStatusService,
+                           String odomTopic, String batteryTopic, String mapTopic) {
         this.robotId = robotId;
         this.uri = uri;
         this.reconnectDelayMs = reconnectDelayMs;
         this.robotStatusService = robotStatusService;
+        this.odomTopic = odomTopic;
+        this.batteryTopic = batteryTopic;
+        this.mapTopic = mapTopic;
     }
 
     public void start() {
@@ -72,12 +79,17 @@ public class RosBridgeClient {
 
     private void subscribeTopics() {
         send(String.format(
-                "{\"op\":\"subscribe\",\"topic\":\"/%s/odom\",\"type\":\"nav_msgs/Odometry\"}",
-                robotId));
+                "{\"op\":\"subscribe\",\"topic\":\"%s\",\"type\":\"nav_msgs/Odometry\"}",
+                odomTopic));
         send(String.format(
-                "{\"op\":\"subscribe\",\"topic\":\"/%s/battery_state\",\"type\":\"sensor_msgs/BatteryState\"}",
-                robotId));
-        log.info("[rosbridge][{}] 토픽 구독 완료", robotId);
+                "{\"op\":\"subscribe\",\"topic\":\"%s\",\"type\":\"sensor_msgs/BatteryState\"}",
+                batteryTopic));
+        if (mapTopic != null) {
+            send(String.format(
+                    "{\"op\":\"subscribe\",\"topic\":\"%s\",\"type\":\"nav_msgs/OccupancyGrid\"}",
+                    mapTopic));
+        }
+        log.info("[rosbridge][{}] 토픽 구독 완료 (odom={}, battery={}, map={})", robotId, odomTopic, batteryTopic, mapTopic);
     }
 
     private void handleMessage(String raw) {
@@ -86,10 +98,12 @@ public class RosBridgeClient {
             String topic = root.path("topic").asText();
             JsonNode msg = root.path("msg");
 
-            if (topic.endsWith("/odom")) {
+            if (topic.equals(odomTopic)) {
                 robotStatusService.onOdom(robotId, msg);
-            } else if (topic.endsWith("/battery_state")) {
+            } else if (topic.equals(batteryTopic)) {
                 robotStatusService.onBattery(robotId, msg);
+            } else if (mapTopic != null && topic.equals(mapTopic)) {
+                robotStatusService.onMap(robotId, msg);
             }
         } catch (Exception e) {
             log.debug("[rosbridge][{}] 메시지 파싱 오류: {}", robotId, e.getMessage());

@@ -29,6 +29,7 @@ public class RobotStatusService {
     private final RobotStatusRepository statusRepository;
     private final RobotEventRepository eventRepository;
     private final SimpMessagingTemplate messagingTemplate;
+    private final MapService mapService;
 
     // 최신 상태를 메모리에 캐싱
     private final Map<String, RobotStatusCache> cache = new ConcurrentHashMap<>();
@@ -46,6 +47,21 @@ public class RobotStatusService {
         current.angularVel = twist.path("angular").path("z").asDouble();
 
         publishStatus(robotId, current);
+    }
+
+    // /map 메시지 처리
+    public void onMap(String robotId, JsonNode msg) {
+        mapService.updateMap(robotId, msg);
+        MapService.MapData data = mapService.getMapData(robotId);
+        if (data != null) {
+            messagingTemplate.convertAndSend("/topic/robot/" + robotId + "/map", Map.of(
+                    "width", data.width(),
+                    "height", data.height(),
+                    "resolution", data.resolution(),
+                    "originX", data.originX(),
+                    "originY", data.originY()
+            ));
+        }
     }
 
     // /battery_state 메시지 처리

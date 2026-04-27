@@ -8,7 +8,8 @@ ROS2 rosbridge를 통해 로봇 상태를 수집하고, Kafka를 거쳐 WebSocke
 ## 주요 기능
 
 - **멀티 로봇 실시간 모니터링** — 로봇별 탭 전환으로 위치·속도·배터리 상태 확인
-- **2D 실시간 경로 맵** — Canvas 기반 주행 궤적 시각화
+- **SLAM 맵 오버레이** — slam_toolbox OccupancyGrid를 실시간으로 렌더링하고 로봇 위치를 맵 위에 오버레이
+- **2D 실시간 경로 맵** — Canvas 기반 주행 궤적 시각화 (맵 없을 시 그리드 폴백)
 - **속도 추이 차트** — 최근 60초 선속도 실시간 라인 차트
 - **주간/월간 주행 거리 통계** — 일별 주행 거리 바 차트
 - **이벤트 로그** — 배터리 저하, 장애물 감지, 목표 도달 등 실시간 이벤트 표시
@@ -24,7 +25,7 @@ ROS2 rosbridge를 통해 로봇 상태를 수집하고, Kafka를 거쳐 WebSocke
 | Frontend | Thymeleaf, Chart.js 4.4, SockJS, STOMP.js |
 | Database | H2 (dev), MySQL 8.0 (prod) |
 | Message Broker | Apache Kafka 7.6 (Confluent) |
-| ROS | ROS2, rosbridge_suite (WebSocket) |
+| ROS | ROS2 Humble, rosbridge_suite, slam_toolbox, TurtleBot3 Gazebo |
 | DevOps | Docker, Docker Compose, Gradle 8.8 |
 
 ---
@@ -100,6 +101,8 @@ docker compose up --build
 | GET | `/api/robot/{id}/stats/monthly` | 최근 30일 일별 주행 거리 |
 | GET | `/api/robot/{id}/history` | 기간별 상태 이력 (`from`, `to` 파라미터) |
 | GET | `/api/robot/{id}/events` | 최근 이벤트 20건 |
+| GET | `/api/robot/{id}/map` | 최신 SLAM 맵 (PNG 이미지) |
+| GET | `/api/robot/{id}/map/info` | 맵 메타데이터 (width, height, resolution, origin) |
 
 ---
 
@@ -109,6 +112,7 @@ docker compose up --build
 |-------|------|
 | `/topic/robot/{id}/status` | 실시간 위치·속도·배터리 상태 |
 | `/topic/robot/{id}/event` | 이벤트 발생 알림 |
+| `/topic/robot/{id}/map` | SLAM 맵 업데이트 알림 (메타데이터) |
 
 ---
 
@@ -121,7 +125,8 @@ src/main/java/com/amr/dashboard/
 │   └── WebSocketConfig.java      # STOMP WebSocket 설정
 ├── controller/
 │   ├── DashboardController.java  # 대시보드 페이지
-│   └── RobotApiController.java   # REST API
+│   ├── RobotApiController.java   # REST API
+│   └── MapController.java        # SLAM 맵 이미지 REST API
 ├── domain/
 │   ├── RobotStatus.java          # 상태 엔티티
 │   └── RobotEvent.java           # 이벤트 엔티티
@@ -134,6 +139,7 @@ src/main/java/com/amr/dashboard/
 │   └── RosBridgeManager.java     # 멀티 로봇 클라이언트 관리
 └── service/
     ├── RobotStatusService.java   # 상태 처리 · WebSocket 푸시
+    ├── MapService.java           # SLAM OccupancyGrid 저장 · PNG 변환
     ├── RobotStatsService.java    # 통계 집계
     └── RobotPersistenceService.java # DB 저장
 ```
@@ -159,8 +165,14 @@ rosbridge:
   robots:
     - robot-id: robot-01
       uri: ws://192.168.1.101:9090
+      odom-topic: /odom
+      battery-topic: /battery_state
+      map-topic: /map
     - robot-id: robot-02
       uri: ws://192.168.1.102:9090
+      odom-topic: /odom
+      battery-topic: /battery_state
+      map-topic: /map
 ```
 
 ---
@@ -177,9 +189,10 @@ rosbridge:
 - [x] Docker Compose 풀스택 배포
 
 ### 파이널 프로젝트 (진행 중)
-- [ ] Ubuntu 22.04 + ROS2 Humble 환경 구축
-- [ ] TurtleBot3 Gazebo 시뮬레이션 연동
-- [ ] rosbridge → Spring Boot 실제 데이터 연결
+- [x] Ubuntu 22.04 + ROS2 Humble 환경 구축
+- [x] TurtleBot3 Gazebo 시뮬레이션 연동
+- [x] rosbridge → Spring Boot 실제 데이터 연결 (odom, battery_state 토픽 구독)
+- [x] slam_toolbox OccupancyGrid 맵 실시간 오버레이
 - [ ] YOLO 기반 장애물 감지 Python 노드 연동
 - [ ] 알림 설정 (배터리 임계값, 이벤트 타입별 필터)
 - [ ] 로봇별 운행 경로 히스토리 재생
