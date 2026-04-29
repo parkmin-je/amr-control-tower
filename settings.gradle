@@ -1,1 +1,4 @@
-rootProject.name = 'amr-dashboard'
+rootProject.name = 'amr-control-tower'
+
+include 'eureka-server'
+include 'api-gateway'

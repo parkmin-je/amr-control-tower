@@ -1,0 +1,13 @@
+FROM eclipse-temurin:21-jdk-alpine AS builder
+WORKDIR /app
+COPY gradlew .
+COPY gradle gradle
+COPY settings.gradle .
+COPY eureka-server eureka-server
+RUN chmod +x gradlew && ./gradlew :eureka-server:bootJar -x test
+
+FROM eclipse-temurin:21-jre-alpine
+WORKDIR /app
+COPY --from=builder /app/eureka-server/build/libs/*.jar app.jar
+EXPOSE 8761
+ENTRYPOINT ["java", "-jar", "app.jar"]

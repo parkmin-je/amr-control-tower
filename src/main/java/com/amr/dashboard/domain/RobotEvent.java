@@ -31,7 +31,18 @@ public class RobotEvent {
     private String message;
 
     public enum EventType {
-        STARTED, STOPPED, LOW_BATTERY, OBSTACLE_DETECTED, GOAL_REACHED, ERROR
+        STARTED, STOPPED, LOW_BATTERY, OBSTACLE_DETECTED, GOAL_REACHED, ERROR, YOLO_DETECTED
+    }
+
+    @Column(name = "ack_status", nullable = false)
+    private boolean ackStatus = false;
+
+    @Column(name = "acked_at")
+    private LocalDateTime ackedAt;
+
+    public void acknowledge() {
+        this.ackStatus = true;
+        this.ackedAt = LocalDateTime.now();
     }
 
     @Builder

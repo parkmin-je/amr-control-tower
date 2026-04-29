@@ -167,6 +167,85 @@ body {
 #card-history   { grid-column: 2 / 4; grid-row: 3; }
 #card-events    { grid-column: 1 / 4; grid-row: 4; }
 
+/* ── Card 배치 (command) ───────────────────────────────────────── */
+#card-command   { grid-column: 1 / 4; grid-row: 5; }
+
+/* ── State Badge ────────────────────────────────────────────────── */
+.state-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 10px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+.state-idle           { background: #1e2e1e; color: #4caf50; }
+.state-moving         { background: #1a2a3a; color: #00bcd4; }
+.state-emergency-stop { background: #3a1b1b; color: #f44336; animation: blink 0.8s step-end infinite; }
+.state-charging       { background: #2a2a1a; color: #ffeb3b; }
+.state-error          { background: #3a1b1b; color: #f44336; }
+
+@keyframes blink { 50% { opacity: 0.4; } }
+
+/* ── Fleet Link ─────────────────────────────────────────────────── */
+.fleet-link {
+    color: #00bcd4;
+    text-decoration: none;
+    font-size: 0.82rem;
+    border: 1px solid #00bcd4;
+    padding: 3px 10px;
+    border-radius: 12px;
+    transition: background 0.2s;
+}
+.fleet-link:hover { background: #00bcd4; color: #0d0d1a; }
+
+/* ── Command Panel ──────────────────────────────────────────────── */
+.command-panel { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+
+.cmd-btn {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+.cmd-btn:hover { opacity: 0.85; }
+.cmd-estop { background: #f44336; color: #fff; }
+.cmd-clear { background: #4caf50; color: #fff; }
+.cmd-goal  { background: #00bcd4; color: #0d0d1a; }
+
+.goal-form { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.goal-input {
+    width: 80px;
+    background: #1e1e3a;
+    border: 1px solid #2a2a4a;
+    border-radius: 4px;
+    color: #e0e0e0;
+    padding: 4px 8px;
+    font-size: 0.85rem;
+    margin-left: 4px;
+}
+.goal-form label { color: #888; font-size: 0.82rem; }
+
+/* ── ACK Button ─────────────────────────────────────────────────── */
+.ack-btn {
+    float: right;
+    padding: 1px 8px;
+    font-size: 0.72rem;
+    background: #1e1e3a;
+    border: 1px solid #2a2a4a;
+    border-radius: 8px;
+    color: #aaa;
+    cursor: pointer;
+}
+.ack-btn:hover { border-color: #00bcd4; color: #00bcd4; }
+.event-acked { opacity: 0.5; }
+.event-yolo_detected { border-left: 3px solid #9c27b0; }
+
 /* ── Scrollbar ─────────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: #0d0d1a; }

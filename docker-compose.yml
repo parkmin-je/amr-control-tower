@@ -1,6 +1,8 @@
 version: '3.8'
 
 services:
+
+  # ── Infrastructure ────────────────────────────────────────────────
   zookeeper:
     image: confluentinc/cp-zookeeper:7.6.0
     environment:
@@ -47,17 +49,53 @@ services:
       timeout: 5s
       retries: 5
 
+  # ── MSA: 서비스 디스커버리 ─────────────────────────────────────────
+  eureka-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.eureka
+    ports:
+      - "8761:8761"
+    networks:
+      - amr-net
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8761/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # ── MSA: API Gateway (외부 진입점) ────────────────────────────────
+  api-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - EUREKA_SERVER_URL=http://eureka-server:8761/eureka/
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - amr-net
+
+  # ── 대시보드 서비스 ────────────────────────────────────────────────
   amr-dashboard:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
       - "8080:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=prod
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - EUREKA_SERVER_URL=http://eureka-server:8761/eureka/
     depends_on:
       kafka:
         condition: service_healthy
       mysql:
+        condition: service_healthy
+      eureka-server:
         condition: service_healthy
     networks:
       - amr-net

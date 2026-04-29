@@ -13,6 +13,7 @@
 <header class="header">
     <h1>AMR Fleet 관제 대시보드</h1>
     <div class="header-right">
+        <a href="/fleet" class="fleet-link">Fleet 전체 보기</a>
         <span id="conn-status" class="badge badge-disconnected">DISCONNECTED</span>
         <span id="clock"></span>
     </div>
@@ -32,7 +33,7 @@
 
     <!-- 로봇 기본 정보 -->
     <section class="card" id="card-info">
-        <h2>로봇 정보</h2>
+        <h2>로봇 정보 <span id="state-badge" class="state-badge state-idle">IDLE</span></h2>
         <table class="info-table">
             <tr><td>Robot ID</td><td id="val-robot-id">-</td></tr>
             <tr><td>위치 X</td><td><span id="val-pos-x">-</span> m</td></tr>
@@ -96,6 +97,23 @@
     <section class="card" id="card-events">
         <h2>이벤트 로그</h2>
         <ul id="event-list" class="event-list"></ul>
+    </section>
+
+    <!-- 로봇 제어 패널 -->
+    <section class="card" id="card-command">
+        <h2>로봇 제어</h2>
+        <div class="command-panel">
+            <button id="btn-estop" class="cmd-btn cmd-estop" onclick="sendEstop()">⬛ 긴급 정지</button>
+            <button id="btn-estop-clear" class="cmd-btn cmd-clear" onclick="clearEstop()">▶ 정지 해제</button>
+        </div>
+        <div class="command-panel" style="margin-top:12px;">
+            <div class="goal-form">
+                <label>X (m) <input id="goal-x" type="number" step="0.1" value="0" class="goal-input"></label>
+                <label>Y (m) <input id="goal-y" type="number" step="0.1" value="0" class="goal-input"></label>
+                <label>Theta (rad) <input id="goal-theta" type="number" step="0.1" value="0" class="goal-input"></label>
+                <button class="cmd-btn cmd-goal" onclick="sendGoal()">목표 전송</button>
+            </div>
+        </div>
     </section>
 
 </main>
@@ -173,9 +191,16 @@
         document.getElementById('val-linear').textContent  = data.linearVel.toFixed(3);
         document.getElementById('val-angular').textContent = data.angularVel.toFixed(3);
         document.getElementById('val-last-time').textContent = new Date().toLocaleTimeString();
+        if (data.robotState) updateStateBadge(data.robotState);
         updateBattery(data.battery);
         updateMap(data.posX, data.posY);
         updateSpeedChart(data.linearVel);
+    }
+
+    function updateStateBadge(state) {
+        const badge = document.getElementById('state-badge');
+        badge.textContent = state;
+        badge.className = 'state-badge state-' + state.toLowerCase().replace('_', '-');
     }
 
     // ── 배터리 ─────────────────────────────────────────────────────────
@@ -337,9 +362,38 @@
         const list = document.getElementById('event-list');
         const li = document.createElement('li');
         li.className = 'event-item event-' + event.eventType.toLowerCase();
-        li.textContent = `[${new Date().toLocaleTimeString()}] ${event.eventType} — ${event.message}`;
+        li.dataset.eventId = event.id || '';
+        li.innerHTML = `<span>[${new Date().toLocaleTimeString()}] ${event.eventType} — ${event.message}</span>` +
+            (event.id ? `<button class="ack-btn" onclick="ackEvent('${event.id}', this)">ACK</button>` : '');
         list.prepend(li);
         if (list.children.length > 20) list.removeChild(list.lastChild);
+    }
+
+    function ackEvent(eventId, btn) {
+        fetch(`/api/robot/${currentRobotId}/events/${eventId}/ack`, { method: 'POST' })
+            .then(r => { if (r.ok) { btn.textContent = '✓'; btn.disabled = true; btn.closest('li').classList.add('event-acked'); } });
+    }
+
+    // ── 로봇 명령 ──────────────────────────────────────────────────────
+    function sendEstop() {
+        fetch(`/api/robot/${currentRobotId}/command/estop`, { method: 'POST' })
+            .then(() => updateStateBadge('EMERGENCY_STOP'));
+    }
+
+    function clearEstop() {
+        fetch(`/api/robot/${currentRobotId}/command/estop/clear`, { method: 'POST' })
+            .then(() => updateStateBadge('IDLE'));
+    }
+
+    function sendGoal() {
+        const x = parseFloat(document.getElementById('goal-x').value) || 0;
+        const y = parseFloat(document.getElementById('goal-y').value) || 0;
+        const theta = parseFloat(document.getElementById('goal-theta').value) || 0;
+        fetch(`/api/robot/${currentRobotId}/command/goal`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ x, y, theta })
+        });
     }
 
     // ── 시계 ───────────────────────────────────────────────────────────

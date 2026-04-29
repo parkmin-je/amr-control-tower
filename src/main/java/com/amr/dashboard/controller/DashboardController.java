@@ -17,4 +17,10 @@ public class DashboardController {
         model.addAttribute("robots", rosBridgeConfig.getRobots());
         return "dashboard";
     }
+
+    @GetMapping("/fleet")
+    public String fleet(Model model) {
+        model.addAttribute("robots", rosBridgeConfig.getRobots());
+        return "fleet";
+    }
 }

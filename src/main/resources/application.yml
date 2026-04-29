@@ -54,6 +54,37 @@ robot:
 server:
   port: 8080
 
+# Eureka Client — 서비스 디스커버리 등록
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_SERVER_URL:http://localhost:8761/eureka/}
+  instance:
+    prefer-ip-address: true
+    instance-id: ${spring.application.name}:${server.port}
+
+# Resilience4j Circuit Breaker
+resilience4j:
+  circuitbreaker:
+    instances:
+      robot-command:
+        register-health-indicator: true
+        sliding-window-size: 5
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+        event-consumer-buffer-size: 10
+
+# Actuator — Circuit Breaker 상태 노출
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,circuitbreakers,metrics
+  health:
+    circuitbreakers:
+      enabled: true
+
 logging:
   level:
     com.amr.dashboard: DEBUG
