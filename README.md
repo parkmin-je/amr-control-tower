@@ -38,27 +38,39 @@ ROS2 rosbridge를 통해 로봇 상태를 수집하고, Kafka를 거쳐 WebSocke
 ## 아키텍처
 
 ```
-[TurtleBot3 / ROS2]  [YOLO Python 노드]
-        |                    |
-   rosbridge (WebSocket)     | POST /api/robot/{id}/detection
-        |                    |
-[RosBridgeClient] ---> [RobotStatusService] <--- [CommandController]
-  subscribe: odom,            |  상태머신              ↑ E-Stop / Goal
-  battery, map      +---------+---------+        [RobotCommandService]
-  publish: cmd_vel, |                   |             |
-  goal            [Kafka Producer]  [WebSocket Push]  | publish
-                    |                (dev only)   [RosBridgeManager]
-            [Kafka Consumer]
-                    |
-            [DB 저장 + WebSocket Push]
-                    |
-            [Spring WebSocket / STOMP]
-                    |
-       [브라우저 대시보드 / Fleet 뷰]
+외부 클라이언트 (브라우저 / curl)
+         │
+    ┌────▼────────────────────────────────────┐
+    │  API Gateway  :8000                     │  ← Spring Cloud Gateway
+    │  lb://amr-dashboard 라우팅              │    Circuit Breaker + /fallback
+    └────┬────────────────────────────────────┘
+         │ Eureka 서비스 디스커버리
+    ┌────▼────────────────────────────────────┐
+    │  Eureka Server  :8761                   │  ← 서비스 레지스트리
+    └────┬────────────────────────────────────┘
+         │ 등록/조회
+    ┌────▼────────────────────────────────────┐
+    │  amr-dashboard  :8080                   │  ← 대시보드 서비스
+    │                                         │
+    │  [RosBridgeClient] ←→ ROS2 rosbridge    │
+    │        ↓ odom / battery / map           │
+    │  [RobotStatusService] 상태머신          │
+    │        ↓ Kafka (prod) / WS (dev)        │
+    │  [CommandService @CircuitBreaker]       │
+    │        ↓ publish cmd_vel / goal         │
+    │  [Spring WebSocket STOMP]               │
+    │        ↓ /topic/robot/{id}/status       │
+    │  [브라우저 대시보드 / Fleet 뷰]          │
+    └─────────────────────────────────────────┘
+         ↑
+    POST /api/robot/{id}/detection
+    [YOLO Python 노드]
 ```
 
-- **dev 프로파일**: H2 인메모리 DB, Kafka 비활성화, rosbridge → 직접 WebSocket 푸시
-- **prod 프로파일**: MySQL, Kafka 활성화, rosbridge → Kafka → Consumer → DB + WebSocket 푸시
+| 프로파일 | DB | Kafka | Eureka | 진입점 |
+|---|---|---|---|---|
+| dev | H2 인메모리 | 비활성화 | 비활성화 | :8080 직접 |
+| prod | MySQL | 활성화 | 활성화 | :8000 Gateway |
 
 ---
 
@@ -86,12 +98,14 @@ docker compose up --build
 
 **서비스 구성**
 
-| 서비스 | 포트 |
-|--------|------|
-| amr-dashboard | 8080 |
-| MySQL | 3306 |
-| Kafka | 9092 |
-| Zookeeper | 2181 |
+| 서비스 | 포트 | 역할 |
+|--------|------|------|
+| api-gateway | **8000** | 외부 진입점 — 라우팅, Circuit Breaker, CORS |
+| amr-dashboard | 8080 | 대시보드 서비스 본체 |
+| eureka-server | 8761 | 서비스 디스커버리 레지스트리 (`/`) |
+| MySQL | 3306 | 상태·이벤트 영구 저장 |
+| Kafka | 9092 | 로봇 상태 이벤트 스트리밍 |
+| Zookeeper | 2181 | Kafka 코디네이터 |
 
 ---
 
@@ -135,6 +149,21 @@ docker compose up --build
 ---
 
 ## 프로젝트 구조
+
+```
+amr-control-tower/                     ← Gradle 멀티모듈 루트
+├── eureka-server/                     ← [모듈] 서비스 디스커버리 (포트 8761)
+│   └── src/main/java/com/amr/eureka/
+│       └── EurekaServerApplication.java
+├── api-gateway/                       ← [모듈] API Gateway (포트 8000)
+│   └── src/main/java/com/amr/gateway/
+│       ├── ApiGatewayApplication.java
+│       └── FallbackController.java
+└── src/                               ← [루트 모듈] 대시보드 서비스 (포트 8080)
+    └── main/java/com/amr/dashboard/
+```
+
+**대시보드 서비스 내부 구조**
 
 ```
 src/main/java/com/amr/dashboard/
@@ -222,12 +251,15 @@ rosbridge:
 - [x] 이벤트 ACK 처리 (ackStatus, ackedAt)
 - [x] 이벤트 타입 확장 (`YOLO_DETECTED`)
 
-### 파이널 프로젝트 — Phase 2: MSA 분리 (예정)
-- [ ] Spring Cloud Gateway — API Gateway 도입
-- [ ] Eureka 서비스 디스커버리
-- [ ] 서비스 분리: telemetry / map / alert / stats / command
-- [ ] Resilience4j Circuit Breaker (rosbridge 장애 격리)
-- [ ] Prometheus + Grafana 메트릭 모니터링
+### 파이널 프로젝트 — Phase 2: MSA 기반 구조 (완료)
+- [x] Gradle 멀티모듈 전환 (eureka-server, api-gateway, dashboard-service)
+- [x] Spring Cloud Eureka Server — 서비스 레지스트리 (포트 8761)
+- [x] Spring Cloud Gateway — API Gateway, lb:// 라우팅, Circuit Breaker 필터 (포트 8000)
+- [x] Gateway Fallback Controller — 503 응답 처리
+- [x] Resilience4j @CircuitBreaker — RobotCommandService E-Stop/Goal 보호
+- [x] Actuator circuitbreakers 엔드포인트 노출
+- [x] dev 프로파일 Eureka 비활성화 (독립 실행 유지)
+- [x] Docker Compose MSA 전체 스택 (eureka + gateway + dashboard + mysql + kafka)
 
 ### 파이널 프로젝트 — Phase 3: 운영 품질 (예정)
 - [ ] 분산 추적 (Zipkin + Sleuth)
