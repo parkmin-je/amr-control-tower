@@ -8,8 +8,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Component
@@ -18,17 +18,16 @@ public class RosBridgeManager {
 
     private final RosBridgeConfig config;
     private final RobotStatusService robotStatusService;
-    private final List<RosBridgeClient> clients = new ArrayList<>();
+    private final Map<String, RosBridgeClient> clients = new ConcurrentHashMap<>();
 
     @PostConstruct
     public void init() {
-        List<RosBridgeConfig.RobotConnection> robots = config.getRobots();
-        if (robots.isEmpty()) {
+        if (config.getRobots().isEmpty()) {
             log.warn("[RosBridgeManager] 연결할 로봇이 설정에 없습니다.");
             return;
         }
 
-        for (RosBridgeConfig.RobotConnection robot : robots) {
+        for (RosBridgeConfig.RobotConnection robot : config.getRobots()) {
             log.info("[RosBridgeManager] 로봇 연결 시작: id={}, uri={}", robot.getRobotId(), robot.getUri());
             RosBridgeClient client = new RosBridgeClient(
                     robot.getRobotId(),
@@ -39,13 +38,22 @@ public class RosBridgeManager {
                     robot.getBatteryTopic(),
                     robot.getMapTopic()
             );
-            clients.add(client);
+            clients.put(robot.getRobotId(), client);
             client.start();
+        }
+    }
+
+    public void publishToRobot(String robotId, String topic, String type, String msgJson) {
+        RosBridgeClient client = clients.get(robotId);
+        if (client != null) {
+            client.publish(topic, type, msgJson);
+        } else {
+            log.warn("[RosBridgeManager] 알 수 없는 로봇 ID: {}", robotId);
         }
     }
 
     @PreDestroy
     public void destroy() {
-        clients.forEach(RosBridgeClient::stop);
+        clients.values().forEach(RosBridgeClient::stop);
     }
 }

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>AMR Fleet 전체 현황</title>
+    <link rel="stylesheet" th:href="@{/css/dashboard.css}">
+    <style>
+        .fleet-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 16px;
+            padding: 20px 28px;
+        }
+        .robot-card {
+            background: #12122a;
+            border: 1px solid #1e1e3a;
+            border-radius: 10px;
+            padding: 18px 20px;
+            transition: border-color 0.3s;
+        }
+        .robot-card.state-moving     { border-color: #00bcd4; }
+        .robot-card.state-emergency  { border-color: #f44336; }
+        .robot-card.state-error      { border-color: #f44336; }
+        .robot-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #1e1e3a;
+        }
+        .robot-card-header h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #00bcd4;
+        }
+        .fleet-info-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+        .fleet-info-table td { padding: 5px 4px; }
+        .fleet-info-table td:first-child { color: #888; width: 45%; }
+        .fleet-info-table td:last-child { font-weight: 600; font-family: 'Courier New', monospace; }
+        .fleet-battery-bar {
+            height: 8px;
+            background: #1e1e3a;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        .fleet-battery-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s ease, background-color 0.3s;
+        }
+        .fleet-estop-btn {
+            width: 100%;
+            margin-top: 12px;
+            padding: 7px;
+            background: #f44336;
+            border: none;
+            border-radius: 6px;
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+        .fleet-estop-btn:hover { opacity: 0.85; }
+        .no-data { color: #555; font-size: 0.82rem; margin-top: 8px; }
+    </style>
+</head>
+<body>
+
+<header class="header">
+    <h1>AMR Fleet 전체 현황</h1>
+    <div class="header-right">
+        <a href="/" class="fleet-link">개별 대시보드</a>
+        <span id="clock"></span>
+    </div>
+</header>
+
+<div class="fleet-grid" id="fleet-grid">
+    <div th:each="robot : ${robots}"
+         class="robot-card"
+         th:id="'card-' + ${robot.robotId}"
+         th:data-robot-id="${robot.robotId}">
+        <div class="robot-card-header">
+            <h3 th:text="${robot.robotId}">robot-01</h3>
+            <span class="state-badge state-idle" th:id="'state-' + ${robot.robotId}">IDLE</span>
+        </div>
+        <table class="fleet-info-table" th:id="'table-' + ${robot.robotId}">
+            <tr><td>상태</td><td class="f-state">-</td></tr>
+            <tr><td>위치 X</td><td class="f-pos-x">-</td></tr>
+            <tr><td>위치 Y</td><td class="f-pos-y">-</td></tr>
+            <tr><td>선속도</td><td class="f-linear">-</td></tr>
+            <tr><td>배터리</td><td class="f-battery">-</td></tr>
+            <tr><td>마지막 수신</td><td class="f-time">-</td></tr>
+        </table>
+        <div class="fleet-battery-bar">
+            <div class="fleet-battery-fill" th:id="'batt-' + ${robot.robotId}" style="width:0%"></div>
+        </div>
+        <button class="fleet-estop-btn"
+                th:onclick="'sendEstopFleet(\'' + ${robot.robotId} + '\')'"
+                th:id="'estop-' + ${robot.robotId}">⬛ 긴급 정지</button>
+    </div>
+</div>
+
+<script th:inline="javascript">
+    const FLEET_ROBOTS = /*[[${robots}]]*/ [];
+
+    function updateRobotCard(robotId, data) {
+        const card = document.getElementById('card-' + robotId);
+        if (!card) return;
+
+        const state = data.robotState || 'IDLE';
+        const stateBadge = document.getElementById('state-' + robotId);
+        if (stateBadge) {
+            stateBadge.textContent = state;
+            stateBadge.className = 'state-badge state-' + state.toLowerCase().replace('_', '-');
+        }
+        card.className = 'robot-card' + (state === 'MOVING' ? ' state-moving' : state === 'EMERGENCY_STOP' ? ' state-emergency' : '');
+
+        const table = document.getElementById('table-' + robotId);
+        if (table) {
+            table.querySelector('.f-state').textContent = state;
+            table.querySelector('.f-pos-x').textContent = (data.posX != null ? data.posX.toFixed(3) : '-') + ' m';
+            table.querySelector('.f-pos-y').textContent = (data.posY != null ? data.posY.toFixed(3) : '-') + ' m';
+            table.querySelector('.f-linear').textContent = (data.linearVel != null ? data.linearVel.toFixed(3) : '-') + ' m/s';
+            table.querySelector('.f-battery').textContent = (data.battery != null ? data.battery : '-') + '%';
+            table.querySelector('.f-time').textContent = new Date().toLocaleTimeString();
+        }
+
+        const fill = document.getElementById('batt-' + robotId);
+        if (fill && data.battery != null) {
+            fill.style.width = data.battery + '%';
+            fill.style.backgroundColor = data.battery > 50 ? '#4caf50' : data.battery > 20 ? '#ff9800' : '#f44336';
+        }
+    }
+
+    function fetchAllRobots() {
+        FLEET_ROBOTS.forEach(robot => {
+            fetch(`/api/robot/${robot.robotId}/status/live`)
+                .then(r => r.ok ? r.json() : null)
+                .then(data => { if (data) updateRobotCard(robot.robotId, data); })
+                .catch(() => {});
+        });
+    }
+
+    function sendEstopFleet(robotId) {
+        fetch(`/api/robot/${robotId}/command/estop`, { method: 'POST' })
+            .then(() => {
+                const badge = document.getElementById('state-' + robotId);
+                if (badge) { badge.textContent = 'EMERGENCY_STOP'; badge.className = 'state-badge state-emergency-stop'; }
+            });
+    }
+
+    setInterval(() => {
+        document.getElementById('clock').textContent = new Date().toLocaleString('ko-KR');
+    }, 1000);
+    document.getElementById('clock').textContent = new Date().toLocaleString('ko-KR');
+
+    fetchAllRobots();
+    setInterval(fetchAllRobots, 2000);
+</script>
+
+</body>
+</html>

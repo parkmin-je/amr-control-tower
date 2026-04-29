@@ -5,6 +5,8 @@ import com.amr.dashboard.domain.RobotEvent;
 import com.amr.dashboard.domain.RobotEventRepository;
 import com.amr.dashboard.domain.RobotStatus;
 import com.amr.dashboard.domain.RobotStatusRepository;
+import com.amr.dashboard.kafka.dto.RobotStatusDto;
+import com.amr.dashboard.service.RobotStatusService;
 import com.amr.dashboard.service.RobotStatsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -23,6 +25,7 @@ public class RobotApiController {
     private final RobotStatusRepository statusRepository;
     private final RobotEventRepository eventRepository;
     private final RobotStatsService statsService;
+    private final RobotStatusService robotStatusService;
     private final RosBridgeConfig rosBridgeConfig;
 
     // 활성 로봇 목록
@@ -34,12 +37,19 @@ public class RobotApiController {
         return ResponseEntity.ok(robotIds);
     }
 
-    // 최신 상태 1건
+    // 최신 상태 1건 (DB)
     @GetMapping("/{robotId}/status")
     public ResponseEntity<RobotStatus> getLatestStatus(@PathVariable String robotId) {
         return statusRepository.findTopByRobotIdOrderByRecordedAtDesc(robotId)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.noContent().build());
+    }
+
+    // 실시간 인메모리 상태 (robotState 포함, fleet 뷰용)
+    @GetMapping("/{robotId}/status/live")
+    public ResponseEntity<RobotStatusDto> getLiveStatus(@PathVariable String robotId) {
+        RobotStatusDto dto = robotStatusService.getCurrentStatus(robotId);
+        return dto != null ? ResponseEntity.ok(dto) : ResponseEntity.noContent().build();
     }
 
     // 오늘 통계
@@ -73,5 +83,19 @@ public class RobotApiController {
     @GetMapping("/{robotId}/events")
     public ResponseEntity<List<RobotEvent>> getEvents(@PathVariable String robotId) {
         return ResponseEntity.ok(eventRepository.findTop20ByRobotIdOrderByOccurredAtDesc(robotId));
+    }
+
+    // 이벤트 확인(ACK) 처리
+    @PostMapping("/{robotId}/events/{eventId}/ack")
+    @org.springframework.transaction.annotation.Transactional
+    public ResponseEntity<Void> ackEvent(@PathVariable String robotId,
+                                          @PathVariable Long eventId) {
+        return eventRepository.findByIdAndRobotId(eventId, robotId)
+                .map(event -> {
+                    event.acknowledge();
+                    eventRepository.save(event);
+                    return ResponseEntity.ok().<Void>build();
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 }

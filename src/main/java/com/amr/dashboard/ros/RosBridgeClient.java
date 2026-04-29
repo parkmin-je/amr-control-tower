@@ -39,8 +39,18 @@ public class RosBridgeClient {
         this.mapTopic = mapTopic;
     }
 
+    public String getRobotId() {
+        return robotId;
+    }
+
     public void start() {
         connect();
+    }
+
+    public void publish(String topic, String type, String msgJson) {
+        send(String.format(
+                "{\"op\":\"publish\",\"topic\":\"%s\",\"type\":\"%s\",\"msg\":%s}",
+                topic, type, msgJson));
     }
 
     private void connect() {

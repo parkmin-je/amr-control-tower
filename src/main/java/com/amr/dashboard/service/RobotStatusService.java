@@ -2,6 +2,7 @@ package com.amr.dashboard.service;
 
 import com.amr.dashboard.domain.RobotEvent;
 import com.amr.dashboard.domain.RobotEventRepository;
+import com.amr.dashboard.domain.RobotState;
 import com.amr.dashboard.domain.RobotStatus;
 import com.amr.dashboard.domain.RobotStatusRepository;
 import com.amr.dashboard.kafka.RobotStatusProducer;
@@ -45,6 +46,14 @@ public class RobotStatusService {
         current.posY = pose.path("position").path("y").asDouble();
         current.linearVel = twist.path("linear").path("x").asDouble();
         current.angularVel = twist.path("angular").path("z").asDouble();
+
+        if (!current.emergencyStopped) {
+            if (Math.abs(current.linearVel) > 0.01 || Math.abs(current.angularVel) > 0.01) {
+                current.state = RobotState.MOVING;
+            } else {
+                current.state = RobotState.IDLE;
+            }
+        }
 
         publishStatus(robotId, current);
     }
@@ -92,6 +101,7 @@ public class RobotStatusService {
                 .linearVel(c.linearVel)
                 .angularVel(c.angularVel)
                 .battery(c.battery)
+                .robotState(c.state.name())
                 .build();
 
         if (producer.isPresent()) {
@@ -144,11 +154,42 @@ public class RobotStatusService {
         log.info("[Event] robotId={}, type={}, message={}", robotId, type, message);
     }
 
+    public RobotStatusDto getCurrentStatus(String robotId) {
+        RobotStatusCache c = cache.get(robotId);
+        if (c == null) return null;
+        return RobotStatusDto.builder()
+                .robotId(robotId)
+                .timestamp(LocalDateTime.now().toString())
+                .posX(c.posX)
+                .posY(c.posY)
+                .linearVel(c.linearVel)
+                .angularVel(c.angularVel)
+                .battery(c.battery)
+                .robotState(c.state.name())
+                .build();
+    }
+
+    public void setEmergencyStop(String robotId) {
+        RobotStatusCache current = cache.computeIfAbsent(robotId, RobotStatusCache::new);
+        current.emergencyStopped = true;
+        current.state = RobotState.EMERGENCY_STOP;
+        publishStatus(robotId, current);
+    }
+
+    public void clearEmergencyStop(String robotId) {
+        RobotStatusCache current = cache.computeIfAbsent(robotId, RobotStatusCache::new);
+        current.emergencyStopped = false;
+        current.state = RobotState.IDLE;
+        publishStatus(robotId, current);
+    }
+
     private static class RobotStatusCache {
         String robotId;
         double posX, posY, linearVel, angularVel;
         int battery = 100;
         boolean lowBatteryAlerted = false;
+        RobotState state = RobotState.IDLE;
+        boolean emergencyStopped = false;
 
         RobotStatusCache(String robotId) {
             this.robotId = robotId;

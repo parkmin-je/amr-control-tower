@@ -9,4 +9,6 @@ public interface RobotEventRepository extends JpaRepository<RobotEvent, Long> {
     List<RobotEvent> findTop20ByRobotIdOrderByOccurredAtDesc(String robotId);
 
     long countByRobotIdAndEventType(String robotId, RobotEvent.EventType eventType);
+
+    java.util.Optional<RobotEvent> findByIdAndRobotId(Long id, String robotId);
 }
