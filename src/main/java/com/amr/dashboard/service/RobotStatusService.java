@@ -38,6 +38,24 @@ public class RobotStatusService {
     // 최신 상태를 메모리에 캐싱
     private final Map<String, RobotStatusCache> cache = new ConcurrentHashMap<>();
 
+    // /tf 메시지 처리 — map→odom 변환 추출
+    public void onTf(String robotId, JsonNode msg) {
+        JsonNode transforms = msg.path("transforms");
+        for (JsonNode tf : transforms) {
+            String parentFrame = tf.path("header").path("frame_id").asText();
+            String childFrame = tf.path("child_frame_id").asText();
+            if ("map".equals(parentFrame) && "odom".equals(childFrame)) {
+                RobotStatusCache current = cache.computeIfAbsent(robotId, RobotStatusCache::new);
+                current.mapOdomTx = tf.path("transform").path("translation").path("x").asDouble();
+                current.mapOdomTy = tf.path("transform").path("translation").path("y").asDouble();
+                double qz = tf.path("transform").path("rotation").path("z").asDouble();
+                double qw = tf.path("transform").path("rotation").path("w").asDouble(1.0);
+                current.mapOdomYaw = Math.atan2(2.0 * qw * qz, 1.0 - 2.0 * qz * qz);
+                break;
+            }
+        }
+    }
+
     // /odom 메시지 처리
     public void onOdom(String robotId, JsonNode msg) {
         RobotStatusCache current = cache.computeIfAbsent(robotId, RobotStatusCache::new);
@@ -45,8 +63,8 @@ public class RobotStatusService {
         JsonNode pose = msg.path("pose").path("pose");
         JsonNode twist = msg.path("twist").path("twist");
 
-        current.posX = pose.path("position").path("x").asDouble();
-        current.posY = pose.path("position").path("y").asDouble();
+        double odomX = pose.path("position").path("x").asDouble();
+        double odomY = pose.path("position").path("y").asDouble();
         current.linearVel = twist.path("linear").path("x").asDouble();
         current.angularVel = twist.path("angular").path("z").asDouble();
 
@@ -54,6 +72,12 @@ public class RobotStatusService {
         double qz = pose.path("orientation").path("z").asDouble();
         double qw = pose.path("orientation").path("w").asDouble(1.0);
         current.yaw = Math.atan2(2.0 * qw * qz, 1.0 - 2.0 * qz * qz);
+
+        // odom 프레임 → map 프레임 변환 (map→odom TF 적용)
+        double cos = Math.cos(current.mapOdomYaw);
+        double sin = Math.sin(current.mapOdomYaw);
+        current.posX = current.mapOdomTx + cos * odomX - sin * odomY;
+        current.posY = current.mapOdomTy + sin * odomX + cos * odomY;
 
         if (!current.emergencyStopped) {
             if (Math.abs(current.linearVel) > 0.01 || Math.abs(current.angularVel) > 0.01) {
@@ -218,6 +242,8 @@ public class RobotStatusService {
     private static class RobotStatusCache {
         String robotId;
         double posX, posY, linearVel, angularVel, yaw;
+        // map→odom TF 변환 (기본값 0 → TF 수신 전에는 odom=map으로 동작)
+        double mapOdomTx = 0, mapOdomTy = 0, mapOdomYaw = 0;
         int battery = 100;
         boolean lowBatteryAlerted = false;
         RobotState state = RobotState.IDLE;

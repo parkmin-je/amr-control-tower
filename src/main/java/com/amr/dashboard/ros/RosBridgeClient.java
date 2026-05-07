@@ -107,7 +107,9 @@ public class RosBridgeClient {
                     "{\"op\":\"subscribe\",\"topic\":\"%s\",\"type\":\"sensor_msgs/LaserScan\",\"throttle_rate\":200}",
                     scanTopic));
         }
-        log.info("[rosbridge][{}] 토픽 구독 완료 (odom={}, battery={}, map={}, scan={})", robotId, odomTopic, batteryTopic, mapTopic, scanTopic);
+        // map→odom 좌표 변환을 위해 /tf 구독 (500ms throttle)
+        send("{\"op\":\"subscribe\",\"topic\":\"/tf\",\"type\":\"tf2_msgs/TFMessage\",\"throttle_rate\":500}");
+        log.info("[rosbridge][{}] 토픽 구독 완료 (odom={}, battery={}, map={}, scan={}, tf=/tf)", robotId, odomTopic, batteryTopic, mapTopic, scanTopic);
     }
 
     private void handleMessage(String raw) {
@@ -124,6 +126,8 @@ public class RosBridgeClient {
                 robotStatusService.onMap(robotId, msg);
             } else if (scanTopic != null && topic.equals(scanTopic)) {
                 robotStatusService.onScan(robotId, msg);
+            } else if ("/tf".equals(topic)) {
+                robotStatusService.onTf(robotId, msg);
             }
         } catch (Exception e) {
             log.debug("[rosbridge][{}] 메시지 파싱 오류: {}", robotId, e.getMessage());

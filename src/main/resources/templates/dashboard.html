@@ -383,7 +383,7 @@
             const yaw = lastStatus.yaw || 0;
             mapCtx.save();
             mapCtx.translate(px, py);
-            mapCtx.rotate(-yaw);
+            mapCtx.rotate(Math.PI / 2 - yaw);
             mapCtx.beginPath();
             mapCtx.moveTo(0, -13);
             mapCtx.lineTo(-8, 7);
