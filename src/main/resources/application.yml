@@ -41,11 +41,6 @@ rosbridge:
       odom-topic: /odom
       battery-topic: /battery_state
       map-topic: /map
-    - robot-id: robot-02
-      uri: ws://192.168.109.130:9091
-      odom-topic: /odom
-      battery-topic: /battery_state
-      map-topic: /map
 
 # 로봇 상태 저장 주기 (ms)
 robot:
@@ -75,15 +70,22 @@ resilience4j:
         permitted-number-of-calls-in-half-open-state: 3
         event-consumer-buffer-size: 10
 
-# Actuator — Circuit Breaker 상태 노출
+# Actuator — Circuit Breaker + Prometheus + 분산 추적
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,circuitbreakers,metrics
+        include: health,info,circuitbreakers,metrics,prometheus
   health:
     circuitbreakers:
       enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+  tracing:
+    sampling:
+      probability: 0.0
 
 logging:
   level:

@@ -1,0 +1,129 @@
+{
+  "title": "AMR Fleet 관제 메트릭",
+  "uid": "amr-fleet-metrics",
+  "version": 1,
+  "schemaVersion": 36,
+  "refresh": "10s",
+  "time": { "from": "now-30m", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "로봇별 배터리 잔량 (%)",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "amr_robot_battery{job=\"amr-dashboard\"}",
+          "legendFormat": "{{robot_id}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 20 },
+              { "color": "green", "value": 50 }
+            ]
+          },
+          "color": { "mode": "palette-classic" }
+        }
+      },
+      "options": { "tooltip": { "mode": "multi" } }
+    },
+    {
+      "id": 2,
+      "title": "이벤트 발생 누적 (타입별)",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "increase(amr_robot_event_total{job=\"amr-dashboard\"}[5m])",
+          "legendFormat": "{{robot_id}} / {{event_type}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": { "mode": "palette-classic" }
+        }
+      }
+    },
+    {
+      "id": 3,
+      "title": "로봇 명령 전송 횟수",
+      "type": "stat",
+      "gridPos": { "x": 0, "y": 8, "w": 6, "h": 4 },
+      "targets": [
+        {
+          "expr": "sum(amr_robot_command_total{job=\"amr-dashboard\"}) by (command_type)",
+          "legendFormat": "{{command_type}}",
+          "refId": "A"
+        }
+      ],
+      "options": { "colorMode": "background", "graphMode": "area" }
+    },
+    {
+      "id": 4,
+      "title": "Circuit Breaker 상태",
+      "type": "stat",
+      "gridPos": { "x": 6, "y": 8, "w": 6, "h": 4 },
+      "targets": [
+        {
+          "expr": "resilience4j_circuitbreaker_state{job=\"amr-dashboard\"}",
+          "legendFormat": "{{name}} ({{state}})",
+          "refId": "A"
+        }
+      ],
+      "options": { "colorMode": "background" }
+    },
+    {
+      "id": 5,
+      "title": "HTTP 요청 처리율 (req/s)",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 8, "w": 12, "h": 4 },
+      "targets": [
+        {
+          "expr": "sum(rate(http_server_requests_seconds_count{job=\"amr-dashboard\"}[1m])) by (uri, method)",
+          "legendFormat": "{{method}} {{uri}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" } }
+    },
+    {
+      "id": 6,
+      "title": "JVM 힙 메모리 사용량",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 12, "w": 12, "h": 6 },
+      "targets": [
+        {
+          "expr": "jvm_memory_used_bytes{job=\"amr-dashboard\", area=\"heap\"}",
+          "legendFormat": "{{id}}",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "bytes" } }
+    },
+    {
+      "id": 7,
+      "title": "Gateway 라우팅 요청 수",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 12, "w": 12, "h": 6 },
+      "targets": [
+        {
+          "expr": "sum(rate(spring_cloud_gateway_requests_seconds_count{job=\"api-gateway\"}[1m])) by (routeId, outcome)",
+          "legendFormat": "{{routeId}} ({{outcome}})",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" } }
+    }
+  ]
+}

@@ -29,8 +29,11 @@ dependencies {
     // Eureka Client — 서비스 디스커버리를 통한 lb:// 라우팅
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
 
-    // Actuator — 헬스체크 및 라우트 정보 노출
+    // Actuator + Prometheus + Zipkin
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'io.micrometer:micrometer-registry-prometheus'
+    implementation 'io.micrometer:micrometer-tracing-bridge-brave'
+    implementation 'io.zipkin.reporter2:zipkin-reporter-brave'
 
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'

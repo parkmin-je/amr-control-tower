@@ -30,6 +30,14 @@ public class CommandController {
         return ResponseEntity.ok().build();
     }
 
+    /** 속도 직접 제어 (/cmd_vel) */
+    @PostMapping("/{robotId}/command/velocity")
+    public ResponseEntity<Void> sendVelocity(@PathVariable String robotId,
+                                              @RequestBody VelocityRequest req) {
+        commandService.sendVelocity(robotId, req.linear(), req.angular());
+        return ResponseEntity.ok().build();
+    }
+
     /** 내비게이션 목표 전송 */
     @PostMapping("/{robotId}/command/goal")
     public ResponseEntity<Void> sendGoal(@PathVariable String robotId,
@@ -38,5 +46,6 @@ public class CommandController {
         return ResponseEntity.ok().build();
     }
 
+    record VelocityRequest(double linear, double angular) {}
     record NavGoalRequest(double x, double y, double theta) {}
 }

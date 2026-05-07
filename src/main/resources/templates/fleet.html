@@ -97,8 +97,9 @@
             <div class="fleet-battery-fill" th:id="'batt-' + ${robot.robotId}" style="width:0%"></div>
         </div>
         <button class="fleet-estop-btn"
-                th:onclick="'sendEstopFleet(\'' + ${robot.robotId} + '\')'"
-                th:id="'estop-' + ${robot.robotId}">⬛ 긴급 정지</button>
+                th:data-robot-id="${robot.robotId}"
+                th:id="'estop-' + ${robot.robotId}"
+                onclick="sendEstopFleet(this.dataset.robotId)">⬛ 긴급 정지</button>
     </div>
 </div>
 
