@@ -41,6 +41,7 @@ rosbridge:
       odom-topic: /odom
       battery-topic: /battery_state
       map-topic: /map
+      scan-topic: /scan
 
 # 로봇 상태 저장 주기 (ms)
 robot:

@@ -22,6 +22,7 @@ public class RosBridgeClient {
     private final String odomTopic;
     private final String batteryTopic;
     private final String mapTopic;
+    private final String scanTopic;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private WebSocketClient wsClient;
@@ -29,7 +30,7 @@ public class RosBridgeClient {
 
     public RosBridgeClient(String robotId, String uri, long reconnectDelayMs,
                            RobotStatusService robotStatusService,
-                           String odomTopic, String batteryTopic, String mapTopic) {
+                           String odomTopic, String batteryTopic, String mapTopic, String scanTopic) {
         this.robotId = robotId;
         this.uri = uri;
         this.reconnectDelayMs = reconnectDelayMs;
@@ -37,6 +38,7 @@ public class RosBridgeClient {
         this.odomTopic = odomTopic;
         this.batteryTopic = batteryTopic;
         this.mapTopic = mapTopic;
+        this.scanTopic = scanTopic;
     }
 
     public String getRobotId() {
@@ -99,7 +101,13 @@ public class RosBridgeClient {
                     "{\"op\":\"subscribe\",\"topic\":\"%s\",\"type\":\"nav_msgs/OccupancyGrid\"}",
                     mapTopic));
         }
-        log.info("[rosbridge][{}] 토픽 구독 완료 (odom={}, battery={}, map={})", robotId, odomTopic, batteryTopic, mapTopic);
+        if (scanTopic != null) {
+            // throttle_rate: 200ms → 최대 5Hz로 제한
+            send(String.format(
+                    "{\"op\":\"subscribe\",\"topic\":\"%s\",\"type\":\"sensor_msgs/LaserScan\",\"throttle_rate\":200}",
+                    scanTopic));
+        }
+        log.info("[rosbridge][{}] 토픽 구독 완료 (odom={}, battery={}, map={}, scan={})", robotId, odomTopic, batteryTopic, mapTopic, scanTopic);
     }
 
     private void handleMessage(String raw) {
@@ -114,6 +122,8 @@ public class RosBridgeClient {
                 robotStatusService.onBattery(robotId, msg);
             } else if (mapTopic != null && topic.equals(mapTopic)) {
                 robotStatusService.onMap(robotId, msg);
+            } else if (scanTopic != null && topic.equals(scanTopic)) {
+                robotStatusService.onScan(robotId, msg);
             }
         } catch (Exception e) {
             log.debug("[rosbridge][{}] 메시지 파싱 오류: {}", robotId, e.getMessage());

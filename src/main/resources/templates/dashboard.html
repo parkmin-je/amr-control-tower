@@ -38,6 +38,7 @@
             <tr><td>Robot ID</td><td id="val-robot-id">-</td></tr>
             <tr><td>위치 X</td><td><span id="val-pos-x">-</span> m</td></tr>
             <tr><td>위치 Y</td><td><span id="val-pos-y">-</span> m</td></tr>
+            <tr><td>방향 (Yaw)</td><td><span id="val-yaw">-</span> °</td></tr>
             <tr><td>선속도</td><td><span id="val-linear">-</span> m/s</td></tr>
             <tr><td>각속도</td><td><span id="val-angular">-</span> rad/s</td></tr>
             <tr><td>마지막 수신</td><td id="val-last-time">-</td></tr>
@@ -57,8 +58,17 @@
 
     <!-- 2D 위치 맵 -->
     <section class="card" id="card-map">
-        <h2>실시간 위치 맵</h2>
-        <canvas id="map-canvas" width="512" height="512"></canvas>
+        <h2>실시간 위치 맵
+            <span class="map-toolbar">
+                <button class="map-btn" id="btn-scan-toggle" onclick="toggleScan()">● 스캔</button>
+                <button class="map-btn" onclick="clearPath()">↺ 경로 초기화</button>
+                <span class="map-hint" id="map-hint">맵 클릭 → 목표 이동</span>
+            </span>
+        </h2>
+        <div class="map-wrap">
+            <canvas id="map-canvas" width="512" height="512"></canvas>
+            <canvas id="compass-canvas" width="72" height="72"></canvas>
+        </div>
     </section>
 
     <!-- 속도 추이 그래프 -->
@@ -171,10 +181,15 @@
     let statusSub = null;
     let eventSub = null;
     let mapSub = null;
+    let scanSub = null;
 
-    // 맵 상태
+    // 맵/센서 상태
     let mapImage = null;
     let mapInfo = null;
+    let lastStatus = null;
+    let lastScan = null;
+    let navGoalMarker = null;
+    let showScan = true;
 
     // ── WebSocket / STOMP 연결 ─────────────────────────────────────────
     let stompClient = null;
@@ -201,11 +216,15 @@
         if (statusSub) statusSub.unsubscribe();
         if (eventSub) eventSub.unsubscribe();
         if (mapSub) mapSub.unsubscribe();
+        if (scanSub) scanSub.unsubscribe();
 
         document.getElementById('val-robot-id').textContent = robotId;
         pathPoints.length = 0;
         mapImage = null;
         mapInfo = null;
+        lastStatus = null;
+        lastScan = null;
+        navGoalMarker = null;
 
         statusSub = stompClient.subscribe(`/topic/robot/${robotId}/status`, (msg) => {
             updateStatus(JSON.parse(msg.body));
@@ -216,6 +235,10 @@
         mapSub = stompClient.subscribe(`/topic/robot/${robotId}/map`, (msg) => {
             mapInfo = JSON.parse(msg.body);
             loadMapImage(robotId);
+        });
+        scanSub = stompClient.subscribe(`/topic/robot/${robotId}/scan`, (msg) => {
+            lastScan = JSON.parse(msg.body);
+            redrawMap();
         });
     }
 
@@ -231,14 +254,18 @@
 
     // ── 상태 업데이트 ──────────────────────────────────────────────────
     function updateStatus(data) {
-        document.getElementById('val-pos-x').textContent   = data.posX.toFixed(3);
-        document.getElementById('val-pos-y').textContent   = data.posY.toFixed(3);
+        lastStatus = data;
+        document.getElementById('val-pos-x').textContent   = data.posX.toFixed(4);
+        document.getElementById('val-pos-y').textContent   = data.posY.toFixed(4);
         document.getElementById('val-linear').textContent  = data.linearVel.toFixed(3);
         document.getElementById('val-angular').textContent = data.angularVel.toFixed(3);
+        const yawDeg = (data.yaw * 180 / Math.PI).toFixed(1);
+        document.getElementById('val-yaw').textContent = yawDeg;
         document.getElementById('val-last-time').textContent = new Date().toLocaleTimeString();
         if (data.robotState) updateStateBadge(data.robotState);
         updateBattery(data.battery);
         updateMap(data.posX, data.posY);
+        updateCompass(data.yaw);
         updateSpeedChart(data.linearVel);
     }
 
@@ -259,6 +286,7 @@
     // ── 2D 맵 ──────────────────────────────────────────────────────────
     const mapCanvas = document.getElementById('map-canvas');
     const mapCtx = mapCanvas.getContext('2d');
+    mapCtx.imageSmoothingEnabled = false;
     const MAP_SCALE = 30;
     const MAP_CENTER_X = mapCanvas.width / 2;
     const MAP_CENTER_Y = mapCanvas.height / 2;
@@ -268,7 +296,6 @@
         const img = new Image();
         img.onload = () => { mapImage = img; redrawMap(); };
         img.src = `/api/robot/${robotId}/map?t=${Date.now()}`;
-        mapCtx.imageSmoothingEnabled = false;
     }
 
     function worldToCanvas(x, y) {
@@ -283,13 +310,24 @@
         };
     }
 
+    function canvasToWorld(px, py) {
+        if (!mapInfo) return { x: 0, y: 0 };
+        const mapPxX = (px / mapCanvas.width) * mapInfo.width;
+        const mapPxY = (py / mapCanvas.height) * mapInfo.height;
+        return {
+            x: mapPxX * mapInfo.resolution + mapInfo.originX,
+            y: (mapInfo.height - mapPxY) * mapInfo.resolution + mapInfo.originY
+        };
+    }
+
     function redrawMap() {
         mapCtx.clearRect(0, 0, mapCanvas.width, mapCanvas.height);
 
+        // 1. SLAM 맵 배경
         if (mapImage && mapInfo) {
             mapCtx.drawImage(mapImage, 0, 0, mapCanvas.width, mapCanvas.height);
         } else {
-            mapCtx.strokeStyle = '#2a2a3e';
+            mapCtx.strokeStyle = '#1a1a2e';
             mapCtx.lineWidth = 0.5;
             for (let i = 0; i < mapCanvas.width; i += MAP_SCALE) {
                 mapCtx.beginPath(); mapCtx.moveTo(i, 0); mapCtx.lineTo(i, mapCanvas.height); mapCtx.stroke();
@@ -299,30 +337,153 @@
             }
         }
 
+        // 2. LiDAR 스캔 포인트
+        if (showScan && lastScan && lastStatus) {
+            const { angleMin, angleIncrement, ranges } = lastScan;
+            const { posX, posY, yaw } = lastStatus;
+            ranges.forEach((r, i) => {
+                if (r <= 0 || r > 4.0) return;
+                const angle = angleMin + i * angleIncrement + yaw;
+                const wx = posX + r * Math.cos(angle);
+                const wy = posY + r * Math.sin(angle);
+                const { px, py } = worldToCanvas(wx, wy);
+                const norm = Math.min(r / 3.5, 1);
+                const hue = norm * 110;
+                mapCtx.beginPath();
+                mapCtx.arc(px, py, 2, 0, Math.PI * 2);
+                mapCtx.fillStyle = `hsla(${hue},100%,60%,0.75)`;
+                mapCtx.fill();
+            });
+        }
+
+        // 3. 주행 경로
         if (pathPoints.length > 1) {
             mapCtx.beginPath();
-            mapCtx.strokeStyle = '#00bcd4';
-            mapCtx.lineWidth = 2;
+            mapCtx.strokeStyle = 'rgba(0,188,212,0.6)';
+            mapCtx.lineWidth = 1.5;
             mapCtx.moveTo(pathPoints[0].px, pathPoints[0].py);
             pathPoints.forEach(p => mapCtx.lineTo(p.px, p.py));
             mapCtx.stroke();
         }
 
-        if (pathPoints.length > 0) {
-            const last = pathPoints[pathPoints.length - 1];
+        // 4. 목표 마커
+        if (navGoalMarker) {
+            const { px, py } = worldToCanvas(navGoalMarker.x, navGoalMarker.y);
+            mapCtx.strokeStyle = '#ffeb3b';
+            mapCtx.lineWidth = 2;
+            mapCtx.beginPath(); mapCtx.moveTo(px-10, py); mapCtx.lineTo(px+10, py); mapCtx.stroke();
+            mapCtx.beginPath(); mapCtx.moveTo(px, py-10); mapCtx.lineTo(px, py+10); mapCtx.stroke();
+            mapCtx.beginPath(); mapCtx.arc(px, py, 8, 0, Math.PI * 2);
+            mapCtx.strokeStyle = 'rgba(255,235,59,0.5)'; mapCtx.stroke();
+        }
+
+        // 5. 로봇 (방향 화살표)
+        if (pathPoints.length > 0 && lastStatus) {
+            const { px, py } = worldToCanvas(lastStatus.posX, lastStatus.posY);
+            const yaw = lastStatus.yaw || 0;
+            mapCtx.save();
+            mapCtx.translate(px, py);
+            mapCtx.rotate(-yaw);
             mapCtx.beginPath();
-            mapCtx.arc(last.px, last.py, 7, 0, Math.PI * 2);
+            mapCtx.moveTo(0, -13);
+            mapCtx.lineTo(-8, 7);
+            mapCtx.lineTo(0, 3);
+            mapCtx.lineTo(8, 7);
+            mapCtx.closePath();
             mapCtx.fillStyle = '#ff5722';
+            mapCtx.strokeStyle = '#fff';
+            mapCtx.lineWidth = 1.5;
             mapCtx.fill();
+            mapCtx.stroke();
+            mapCtx.restore();
         }
     }
 
     function updateMap(x, y) {
         const { px, py } = worldToCanvas(x, y);
         pathPoints.push({ px, py });
-        if (pathPoints.length > 500) pathPoints.shift();
+        if (pathPoints.length > 800) pathPoints.shift();
         redrawMap();
     }
+
+    function clearPath() {
+        pathPoints.length = 0;
+        navGoalMarker = null;
+        redrawMap();
+    }
+
+    function toggleScan() {
+        showScan = !showScan;
+        const btn = document.getElementById('btn-scan-toggle');
+        btn.style.color = showScan ? '#4caf50' : '#555';
+        redrawMap();
+    }
+
+    // 맵 클릭 → Nav2 목표 전송
+    mapCanvas.addEventListener('click', (e) => {
+        if (!mapInfo) return;
+        const rect = mapCanvas.getBoundingClientRect();
+        const scaleX = mapCanvas.width / rect.width;
+        const scaleY = mapCanvas.height / rect.height;
+        const px = (e.clientX - rect.left) * scaleX;
+        const py = (e.clientY - rect.top) * scaleY;
+        const world = canvasToWorld(px, py);
+        navGoalMarker = world;
+        document.getElementById('goal-x').value = world.x.toFixed(2);
+        document.getElementById('goal-y').value = world.y.toFixed(2);
+        document.getElementById('goal-theta').value = '0';
+        redrawMap();
+        fetch(`/api/robot/${currentRobotId}/command/goal`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ x: world.x, y: world.y, theta: 0 })
+        });
+    });
+
+    // ── 나침반 ──────────────────────────────────────────────────────────
+    const compassCanvas = document.getElementById('compass-canvas');
+    const compassCtx = compassCanvas.getContext('2d');
+
+    function updateCompass(yaw) {
+        const cx = compassCanvas.width / 2, cy = compassCanvas.height / 2, r = cx - 4;
+        compassCtx.clearRect(0, 0, compassCanvas.width, compassCanvas.height);
+        compassCtx.beginPath();
+        compassCtx.arc(cx, cy, r, 0, Math.PI * 2);
+        compassCtx.fillStyle = '#0a0a16';
+        compassCtx.fill();
+        compassCtx.strokeStyle = '#1e1e3a';
+        compassCtx.lineWidth = 1.5;
+        compassCtx.stroke();
+        ['N','E','S','W'].forEach((dir, i) => {
+            const a = i * Math.PI / 2;
+            const tx = cx + (r - 10) * Math.sin(a);
+            const ty = cy - (r - 10) * Math.cos(a) + 4;
+            compassCtx.fillStyle = dir === 'N' ? '#f44336' : '#555';
+            compassCtx.font = 'bold 9px sans-serif';
+            compassCtx.textAlign = 'center';
+            compassCtx.fillText(dir, tx, ty);
+        });
+        compassCtx.save();
+        compassCtx.translate(cx, cy);
+        compassCtx.rotate(-yaw);
+        compassCtx.beginPath();
+        compassCtx.moveTo(0, -(r - 16));
+        compassCtx.lineTo(-4, 4); compassCtx.lineTo(0, 0); compassCtx.lineTo(4, 4);
+        compassCtx.closePath();
+        compassCtx.fillStyle = '#f44336'; compassCtx.fill();
+        compassCtx.beginPath();
+        compassCtx.moveTo(0, r - 16);
+        compassCtx.lineTo(-4, -4); compassCtx.lineTo(0, 0); compassCtx.lineTo(4, -4);
+        compassCtx.closePath();
+        compassCtx.fillStyle = '#aaa'; compassCtx.fill();
+        compassCtx.restore();
+        const deg = ((yaw * 180 / Math.PI) % 360 + 360) % 360;
+        compassCtx.fillStyle = '#00bcd4';
+        compassCtx.font = 'bold 10px monospace';
+        compassCtx.textAlign = 'center';
+        compassCtx.fillText(Math.round(deg) + '°', cx, cy + 4);
+    }
+    updateCompass(0);
 
     // ── 속도 차트 ──────────────────────────────────────────────────────
     const speedLabels = [];

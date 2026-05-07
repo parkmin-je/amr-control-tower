@@ -16,6 +16,7 @@ public class RobotStatusDto {
     private double posY;
     private double linearVel;
     private double angularVel;
+    private double yaw;
     private int battery;
     private String robotState;  // RobotState.name()
 }

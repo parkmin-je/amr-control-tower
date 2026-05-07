@@ -95,6 +95,11 @@ body {
 .battery-pct { font-size: 1.3rem; font-weight: 700; min-width: 54px; text-align: right; }
 
 /* ── Map Canvas ────────────────────────────────────────────────── */
+.map-wrap {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+}
 #map-canvas {
     display: block;
     background: #0a0a16;
@@ -102,6 +107,39 @@ body {
     border: 1px solid #1e1e3a;
     width: 100%;
     height: auto;
+    cursor: crosshair;
+}
+#compass-canvas {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    border-radius: 50%;
+    border: 1px solid #1e1e3a;
+    background: #0a0a16;
+}
+
+/* ── Map Toolbar ────────────────────────────────────────────────── */
+.map-toolbar {
+    float: right;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.map-btn {
+    padding: 2px 8px;
+    border: 1px solid #2a2a4a;
+    border-radius: 8px;
+    background: transparent;
+    color: #4caf50;
+    cursor: pointer;
+    font-size: 0.72rem;
+    transition: border-color 0.2s, color 0.2s;
+}
+.map-btn:hover { border-color: #00bcd4; color: #00bcd4; }
+.map-hint {
+    font-size: 0.68rem;
+    color: #444;
+    font-style: italic;
 }
 
 /* ── Stats ─────────────────────────────────────────────────────── */

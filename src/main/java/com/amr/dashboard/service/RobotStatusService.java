@@ -17,6 +17,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -48,6 +50,11 @@ public class RobotStatusService {
         current.linearVel = twist.path("linear").path("x").asDouble();
         current.angularVel = twist.path("angular").path("z").asDouble();
 
+        // quaternion → yaw (2D: qx=qy=0)
+        double qz = pose.path("orientation").path("z").asDouble();
+        double qw = pose.path("orientation").path("w").asDouble(1.0);
+        current.yaw = Math.atan2(2.0 * qw * qz, 1.0 - 2.0 * qz * qz);
+
         if (!current.emergencyStopped) {
             if (Math.abs(current.linearVel) > 0.01 || Math.abs(current.angularVel) > 0.01) {
                 current.state = RobotState.MOVING;
@@ -57,6 +64,26 @@ public class RobotStatusService {
         }
 
         publishStatus(robotId, current);
+    }
+
+    // /scan 메시지 처리 (sensor_msgs/LaserScan)
+    public void onScan(String robotId, JsonNode msg) {
+        double angleMin = msg.path("angle_min").asDouble();
+        double angleIncrement = msg.path("angle_increment").asDouble();
+        JsonNode rangesNode = msg.path("ranges");
+
+        // 3포인트마다 1개 샘플링 → 전송 데이터 1/3로 감소
+        List<Double> ranges = new ArrayList<>();
+        for (int i = 0; i < rangesNode.size(); i += 3) {
+            double r = rangesNode.get(i).asDouble();
+            ranges.add(Double.isFinite(r) ? r : -1.0);
+        }
+
+        messagingTemplate.convertAndSend("/topic/robot/" + robotId + "/scan", Map.of(
+                "angleMin", angleMin,
+                "angleIncrement", angleIncrement * 3,
+                "ranges", ranges
+        ));
     }
 
     // /map 메시지 처리
@@ -102,6 +129,7 @@ public class RobotStatusService {
                 .posY(c.posY)
                 .linearVel(c.linearVel)
                 .angularVel(c.angularVel)
+                .yaw(c.yaw)
                 .battery(c.battery)
                 .robotState(c.state.name())
                 .build();
@@ -189,7 +217,7 @@ public class RobotStatusService {
 
     private static class RobotStatusCache {
         String robotId;
-        double posX, posY, linearVel, angularVel;
+        double posX, posY, linearVel, angularVel, yaw;
         int battery = 100;
         boolean lowBatteryAlerted = false;
         RobotState state = RobotState.IDLE;

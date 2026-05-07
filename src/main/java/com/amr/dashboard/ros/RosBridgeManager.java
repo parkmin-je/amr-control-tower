@@ -36,7 +36,8 @@ public class RosBridgeManager {
                     robotStatusService,
                     robot.getOdomTopic(),
                     robot.getBatteryTopic(),
-                    robot.getMapTopic()
+                    robot.getMapTopic(),
+                    robot.getScanTopic()
             );
             clients.put(robot.getRobotId(), client);
             client.start();

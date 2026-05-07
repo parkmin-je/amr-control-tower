@@ -25,5 +25,6 @@ public class RosBridgeConfig {
         private String odomTopic = "/odom";
         private String batteryTopic = "/battery_state";
         private String mapTopic = "/map";
+        private String scanTopic = "/scan";
     }
 }
