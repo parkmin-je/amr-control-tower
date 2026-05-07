@@ -2,196 +2,303 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>AMR Fleet 관제 대시보드</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AMR Control Tower</title>
     <link rel="stylesheet" th:href="@{/css/dashboard.css}">
     <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
+<div class="app">
 
-<header class="header">
-    <h1>AMR Fleet 관제 대시보드</h1>
-    <div class="header-right">
-        <a href="/fleet" class="fleet-link">Fleet 전체 보기</a>
-        <span id="conn-status" class="badge badge-disconnected">DISCONNECTED</span>
-        <span id="clock"></span>
+    <!-- ── TOP BAR ────────────────────────────────────────────────── -->
+    <header class="topbar">
+        <div class="topbar-brand">
+            <div class="brand-hex">⬡</div>
+            <div>
+                <div class="brand-name">AMR CONTROL TOWER</div>
+                <div class="brand-sub">FLEET MANAGEMENT SYSTEM v2</div>
+            </div>
+        </div>
+
+        <div class="topbar-center">
+            <div class="sys-pill">
+                <div class="conn-dot disconnected" id="conn-dot"></div>
+                <span class="sys-pill-label">LINK</span>
+                <span id="conn-status" class="sys-pill-val">OFFLINE</span>
+            </div>
+            <div class="sys-pill">
+                <span class="sys-pill-label">UNITS</span>
+                <span class="sys-pill-val" th:text="${robots.size()} + ' ONLINE'">1 ONLINE</span>
+            </div>
+            <div class="sys-pill">
+                <span class="sys-pill-label">SYS</span>
+                <span class="sys-pill-val" style="color:var(--green)">NOMINAL</span>
+            </div>
+        </div>
+
+        <div class="topbar-right">
+            <a href="/fleet" class="fleet-btn">FLEET VIEW</a>
+            <span id="clock" class="topbar-clock"></span>
+        </div>
+    </header>
+
+    <!-- ── WORKSPACE ──────────────────────────────────────────────── -->
+    <div class="workspace">
+
+        <!-- LEFT SIDEBAR -->
+        <aside class="sidebar">
+
+            <!-- Robot Selector -->
+            <div class="panel-section">
+                <div class="section-label">ACTIVE UNIT</div>
+                <nav class="robot-list">
+                    <button th:each="robot, stat : ${robots}"
+                            th:id="'tab-' + ${robot.robotId}"
+                            th:text="${robot.robotId}"
+                            th:classappend="${stat.first} ? ' active' : ''"
+                            class="tab-btn">
+                    </button>
+                </nav>
+            </div>
+
+            <!-- State -->
+            <div class="panel-section">
+                <div class="section-label">
+                    STATE
+                    <span id="state-badge" class="state-badge state-idle">IDLE</span>
+                </div>
+            </div>
+
+            <!-- Telemetry -->
+            <div class="panel-section">
+                <div class="section-label">TELEMETRY</div>
+                <div class="telem-grid">
+                    <div class="telem-row">
+                        <span class="telem-key">ROBOT ID</span>
+                        <span class="telem-val accent" id="val-robot-id">—</span>
+                    </div>
+                    <div class="telem-row">
+                        <span class="telem-key">POS X</span>
+                        <span class="telem-val" id="val-pos-x">—</span>
+                    </div>
+                    <div class="telem-row">
+                        <span class="telem-key">POS Y</span>
+                        <span class="telem-val" id="val-pos-y">—</span>
+                    </div>
+                    <div class="telem-row">
+                        <span class="telem-key">YAW</span>
+                        <span class="telem-val" id="val-yaw">—</span>
+                    </div>
+                    <div class="telem-row">
+                        <span class="telem-key">LIN VEL</span>
+                        <span class="telem-val" id="val-linear">—</span>
+                    </div>
+                    <div class="telem-row">
+                        <span class="telem-key">ANG VEL</span>
+                        <span class="telem-val" id="val-angular">—</span>
+                    </div>
+                    <div class="telem-row">
+                        <span class="telem-key">UPDATED</span>
+                        <span class="telem-val" style="font-size:0.68rem" id="val-last-time">—</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Battery -->
+            <div class="panel-section">
+                <div class="section-label">POWER</div>
+                <div class="battery-display">
+                    <div class="battery-top">
+                        <span class="battery-pct" id="val-battery">—%</span>
+                        <span class="battery-label-sub">CHARGE</span>
+                    </div>
+                    <div class="battery-bar-bg">
+                        <div class="battery-bar-fill" id="battery-fill" style="width:0%"></div>
+                    </div>
+                </div>
+            </div>
+
+        </aside>
+
+        <!-- CENTER: Map + Speed Chart -->
+        <div class="center-panel">
+
+            <!-- Map -->
+            <div class="map-panel">
+                <div class="panel-header">
+                    <span class="panel-title">SLAM MAP — REAL-TIME</span>
+                    <div class="map-controls">
+                        <button class="ctrl-btn active" id="btn-scan-toggle" onclick="toggleScan()">LIDAR</button>
+                        <button class="ctrl-btn" onclick="clearPath()">CLEAR PATH</button>
+                        <span class="map-hint">click map → nav2 goal</span>
+                    </div>
+                </div>
+                <div class="map-wrap">
+                    <div class="map-corner map-corner-tl"></div>
+                    <div class="map-corner map-corner-tr"></div>
+                    <div class="map-corner map-corner-bl"></div>
+                    <div class="map-corner map-corner-br"></div>
+                    <canvas id="map-canvas" width="512" height="512"></canvas>
+                    <canvas id="compass-canvas" width="76" height="76"></canvas>
+                </div>
+            </div>
+
+            <!-- Speed Chart -->
+            <div class="speed-panel">
+                <div class="panel-header">
+                    <span class="panel-title">LINEAR VELOCITY — m/s</span>
+                </div>
+                <canvas id="speed-chart"></canvas>
+            </div>
+
+        </div>
+
+        <!-- RIGHT PANEL -->
+        <aside class="right-panel">
+
+            <!-- Session Stats -->
+            <div class="panel-section">
+                <div class="section-label">SESSION STATS</div>
+                <div class="stat-cards">
+                    <div class="stat-card">
+                        <div class="stat-val" id="stat-distance">—</div>
+                        <div class="stat-label">DISTANCE (m)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-val" id="stat-uptime">—</div>
+                        <div class="stat-label">UPTIME (s)</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mission History Chart -->
+            <div class="panel-section">
+                <div class="section-label">
+                    MISSION HISTORY
+                    <span class="chart-tabs">
+                        <button class="chart-tab active" onclick="switchChart('weekly', this)">7D</button>
+                        <button class="chart-tab" onclick="switchChart('monthly', this)">30D</button>
+                    </span>
+                </div>
+                <canvas id="history-chart" height="140"></canvas>
+            </div>
+
+        </aside>
     </div>
-</header>
 
-<!-- 로봇 선택 탭 -->
-<nav class="robot-tabs">
-    <button th:each="robot, stat : ${robots}"
-            th:id="'tab-' + ${robot.robotId}"
-            th:text="${robot.robotId}"
-            th:classappend="${stat.first} ? ' active' : ''"
-            class="tab-btn">
-    </button>
-</nav>
+    <!-- ── CONTROL BAR ─────────────────────────────────────────────── -->
+    <section class="control-bar">
 
-<main class="grid">
-
-    <!-- 로봇 기본 정보 -->
-    <section class="card" id="card-info">
-        <h2>로봇 정보 <span id="state-badge" class="state-badge state-idle">IDLE</span></h2>
-        <table class="info-table">
-            <tr><td>Robot ID</td><td id="val-robot-id">-</td></tr>
-            <tr><td>위치 X</td><td><span id="val-pos-x">-</span> m</td></tr>
-            <tr><td>위치 Y</td><td><span id="val-pos-y">-</span> m</td></tr>
-            <tr><td>방향 (Yaw)</td><td><span id="val-yaw">-</span> °</td></tr>
-            <tr><td>선속도</td><td><span id="val-linear">-</span> m/s</td></tr>
-            <tr><td>각속도</td><td><span id="val-angular">-</span> rad/s</td></tr>
-            <tr><td>마지막 수신</td><td id="val-last-time">-</td></tr>
-        </table>
-    </section>
-
-    <!-- 배터리 -->
-    <section class="card" id="card-battery">
-        <h2>배터리</h2>
-        <div class="battery-wrap">
-            <div class="battery-bar-bg">
-                <div class="battery-bar-fill" id="battery-fill"></div>
+        <!-- Emergency + Goal -->
+        <div class="ctrl-group" style="flex:1; min-width:280px;">
+            <div class="ctrl-group-label">COMMAND</div>
+            <div class="cmd-row">
+                <button id="btn-estop"       class="cmd-btn cmd-estop" onclick="sendEstop()">■ E-STOP</button>
+                <button id="btn-estop-clear" class="cmd-btn cmd-clear" onclick="clearEstop()">▶ RESUME</button>
             </div>
-            <span id="val-battery" class="battery-pct">--%</span>
-        </div>
-    </section>
-
-    <!-- 2D 위치 맵 -->
-    <section class="card" id="card-map">
-        <h2>실시간 위치 맵
-            <span class="map-toolbar">
-                <button class="map-btn" id="btn-scan-toggle" onclick="toggleScan()">● 스캔</button>
-                <button class="map-btn" onclick="clearPath()">↺ 경로 초기화</button>
-                <span class="map-hint" id="map-hint">맵 클릭 → 목표 이동</span>
-            </span>
-        </h2>
-        <div class="map-wrap">
-            <canvas id="map-canvas" width="512" height="512"></canvas>
-            <canvas id="compass-canvas" width="72" height="72"></canvas>
-        </div>
-    </section>
-
-    <!-- 속도 추이 그래프 -->
-    <section class="card" id="card-speed">
-        <h2>속도 추이 (최근 60s)</h2>
-        <canvas id="speed-chart"></canvas>
-    </section>
-
-    <!-- 오늘 통계 -->
-    <section class="card" id="card-stats">
-        <h2>오늘 통계</h2>
-        <div class="stat-grid">
-            <div class="stat-item">
-                <div class="stat-val" id="stat-distance">--</div>
-                <div class="stat-label">주행 거리 (m)</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-val" id="stat-uptime">--</div>
-                <div class="stat-label">가동 시간 (s)</div>
+            <div class="goal-form">
+                <div class="goal-field">
+                    <label>X (m)</label>
+                    <input id="goal-x" type="number" step="0.1" value="0" class="goal-input">
+                </div>
+                <div class="goal-field">
+                    <label>Y (m)</label>
+                    <input id="goal-y" type="number" step="0.1" value="0" class="goal-input">
+                </div>
+                <div class="goal-field">
+                    <label>THETA</label>
+                    <input id="goal-theta" type="number" step="0.1" value="0" class="goal-input">
+                </div>
+                <button class="cmd-btn cmd-goal" onclick="sendGoal()" style="align-self:flex-end">SEND GOAL</button>
             </div>
         </div>
+
+        <!-- Speed Sliders -->
+        <div class="ctrl-group" style="flex:1; min-width:200px;">
+            <div class="ctrl-group-label">VELOCITY LIMITS</div>
+            <div class="speed-sliders">
+                <div class="slider-row">
+                    <div class="slider-header">
+                        <span class="slider-name">LINEAR</span>
+                        <span class="slider-val"><span id="lbl-linear">0.3</span> m/s</span>
+                    </div>
+                    <input type="range" id="sl-linear" min="0.1" max="1.0" step="0.1" value="0.3"
+                           oninput="document.getElementById('lbl-linear').textContent=this.value">
+                </div>
+                <div class="slider-row">
+                    <div class="slider-header">
+                        <span class="slider-name">ANGULAR</span>
+                        <span class="slider-val"><span id="lbl-angular">0.5</span> rad/s</span>
+                    </div>
+                    <input type="range" id="sl-angular" min="0.1" max="1.5" step="0.1" value="0.5"
+                           oninput="document.getElementById('lbl-angular').textContent=this.value">
+                </div>
+            </div>
+        </div>
+
+        <!-- D-Pad -->
+        <div class="ctrl-group">
+            <div class="ctrl-group-label">MANUAL DRIVE</div>
+            <div class="dpad-area">
+                <div class="kb-hint">WASD / ARROW KEYS / SPACE=STOP</div>
+                <div class="dpad">
+                    <div class="dpad-row">
+                        <button class="dpad-btn" id="dpad-up"
+                                onmousedown="dpadStart(0,1)" onmouseup="dpadStop()"
+                                ontouchstart="dpadStart(0,1)" ontouchend="dpadStop()">▲</button>
+                    </div>
+                    <div class="dpad-row">
+                        <button class="dpad-btn" id="dpad-left"
+                                onmousedown="dpadStart(1,0)" onmouseup="dpadStop()"
+                                ontouchstart="dpadStart(1,0)" ontouchend="dpadStop()">◀</button>
+                        <button class="dpad-btn dpad-stop" id="dpad-center"
+                                onmousedown="sendVelocityCmd(0,0)">■</button>
+                        <button class="dpad-btn" id="dpad-right"
+                                onmousedown="dpadStart(-1,0)" onmouseup="dpadStop()"
+                                ontouchstart="dpadStart(-1,0)" ontouchend="dpadStop()">▶</button>
+                    </div>
+                    <div class="dpad-row">
+                        <button class="dpad-btn" id="dpad-down"
+                                onmousedown="dpadStart(0,-1)" onmouseup="dpadStop()"
+                                ontouchstart="dpadStart(0,-1)" ontouchend="dpadStop()">▼</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </section>
 
-    <!-- 주간/월간 차트 -->
-    <section class="card" id="card-history">
-        <h2>주행 거리 추이
-            <span class="chart-tabs">
-                <button class="chart-tab active" onclick="switchChart('weekly', this)">주간</button>
-                <button class="chart-tab" onclick="switchChart('monthly', this)">월간</button>
-            </span>
-        </h2>
-        <canvas id="history-chart"></canvas>
-    </section>
-
-    <!-- 이벤트 로그 -->
-    <section class="card" id="card-events">
-        <h2>이벤트 로그</h2>
+    <!-- ── EVENT LOG ────────────────────────────────────────────────── -->
+    <section class="event-bar">
+        <div class="event-bar-header">
+            <span class="event-bar-title">EVENT LOG</span>
+            <span class="event-count" id="event-count">0</span>
+        </div>
         <ul id="event-list" class="event-list"></ul>
     </section>
 
-    <!-- 로봇 제어 패널 -->
-    <section class="card" id="card-command">
-        <h2>로봇 제어</h2>
-        <div class="control-layout">
+</div><!-- /.app -->
 
-            <!-- 좌: 긴급 정지 + Nav 목표 -->
-            <div class="control-left">
-                <div class="command-panel">
-                    <button id="btn-estop" class="cmd-btn cmd-estop" onclick="sendEstop()">⬛ 긴급 정지</button>
-                    <button id="btn-estop-clear" class="cmd-btn cmd-clear" onclick="clearEstop()">▶ 정지 해제</button>
-                </div>
-                <div class="command-panel" style="margin-top:12px;">
-                    <div class="goal-form">
-                        <label>X (m) <input id="goal-x" type="number" step="0.1" value="0" class="goal-input"></label>
-                        <label>Y (m) <input id="goal-y" type="number" step="0.1" value="0" class="goal-input"></label>
-                        <label>Theta (rad) <input id="goal-theta" type="number" step="0.1" value="0" class="goal-input"></label>
-                        <button class="cmd-btn cmd-goal" onclick="sendGoal()">목표 전송</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 우: D-패드 조이스틱 -->
-            <div class="control-right">
-                <div class="speed-sliders">
-                    <label class="slider-label">선속도 <span id="lbl-linear">0.3</span> m/s
-                        <input type="range" id="sl-linear" min="0.1" max="1.0" step="0.1" value="0.3"
-                               oninput="document.getElementById('lbl-linear').textContent=this.value">
-                    </label>
-                    <label class="slider-label">각속도 <span id="lbl-angular">0.5</span> rad/s
-                        <input type="range" id="sl-angular" min="0.1" max="1.5" step="0.1" value="0.5"
-                               oninput="document.getElementById('lbl-angular').textContent=this.value">
-                    </label>
-                </div>
-                <div class="dpad-wrap">
-                    <div class="kb-hint">WASD / 방향키로도 제어 가능</div>
-                    <div class="dpad">
-                        <div class="dpad-row">
-                            <button class="dpad-btn" id="dpad-up"
-                                    onmousedown="dpadStart(0,1)" onmouseup="dpadStop()"
-                                    ontouchstart="dpadStart(0,1)" ontouchend="dpadStop()">▲</button>
-                        </div>
-                        <div class="dpad-row">
-                            <button class="dpad-btn" id="dpad-left"
-                                    onmousedown="dpadStart(1,0)" onmouseup="dpadStop()"
-                                    ontouchstart="dpadStart(1,0)" ontouchend="dpadStop()">◀</button>
-                            <button class="dpad-btn dpad-stop" id="dpad-center"
-                                    onmousedown="sendVelocityCmd(0,0)">■</button>
-                            <button class="dpad-btn" id="dpad-right"
-                                    onmousedown="dpadStart(-1,0)" onmouseup="dpadStop()"
-                                    ontouchstart="dpadStart(-1,0)" ontouchend="dpadStop()">▶</button>
-                        </div>
-                        <div class="dpad-row">
-                            <button class="dpad-btn" id="dpad-down"
-                                    onmousedown="dpadStart(0,-1)" onmouseup="dpadStop()"
-                                    ontouchstart="dpadStart(0,-1)" ontouchend="dpadStop()">▼</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-</main>
-
+<!-- ── JAVASCRIPT (logic unchanged) ────────────────────────────────── -->
 <script th:inline="javascript">
     const ROBOTS = /*[[${robots}]]*/ [];
     let currentRobotId = ROBOTS.length > 0 ? ROBOTS[0].robotId : 'robot-01';
 
-    // 로봇별 구독 해제 함수 저장
     let statusSub = null;
-    let eventSub = null;
-    let mapSub = null;
-    let scanSub = null;
+    let eventSub  = null;
+    let mapSub    = null;
+    let scanSub   = null;
 
-    // 맵/센서 상태
-    let mapImage = null;
-    let mapInfo = null;
-    let lastStatus = null;
-    let lastScan = null;
+    let mapImage     = null;
+    let mapInfo      = null;
+    let lastStatus   = null;
+    let lastScan     = null;
     let navGoalMarker = null;
-    let showScan = true;
+    let showScan     = true;
 
-    // ── WebSocket / STOMP 연결 ─────────────────────────────────────────
+    // ── WebSocket / STOMP ─────────────────────────────────────────
     let stompClient = null;
 
     function connect() {
@@ -200,30 +307,36 @@
         stompClient.debug = null;
 
         stompClient.connect({}, () => {
-            document.getElementById('conn-status').textContent = 'CONNECTED';
-            document.getElementById('conn-status').className = 'badge badge-connected';
+            const dot = document.getElementById('conn-dot');
+            const txt = document.getElementById('conn-status');
+            dot.className = 'conn-dot connected';
+            txt.textContent = 'ONLINE';
+            txt.style.color = 'var(--green)';
             subscribeRobot(currentRobotId);
             loadTodayStats();
             loadHistoryChart('weekly');
         }, () => {
-            document.getElementById('conn-status').textContent = 'DISCONNECTED';
-            document.getElementById('conn-status').className = 'badge badge-disconnected';
+            const dot = document.getElementById('conn-dot');
+            const txt = document.getElementById('conn-status');
+            dot.className = 'conn-dot disconnected';
+            txt.textContent = 'OFFLINE';
+            txt.style.color = 'var(--red)';
             setTimeout(connect, 3000);
         });
     }
 
     function subscribeRobot(robotId) {
         if (statusSub) statusSub.unsubscribe();
-        if (eventSub) eventSub.unsubscribe();
-        if (mapSub) mapSub.unsubscribe();
-        if (scanSub) scanSub.unsubscribe();
+        if (eventSub)  eventSub.unsubscribe();
+        if (mapSub)    mapSub.unsubscribe();
+        if (scanSub)   scanSub.unsubscribe();
 
         document.getElementById('val-robot-id').textContent = robotId;
         pathPoints.length = 0;
-        mapImage = null;
-        mapInfo = null;
+        mapImage  = null;
+        mapInfo   = null;
         lastStatus = null;
-        lastScan = null;
+        lastScan  = null;
         navGoalMarker = null;
 
         statusSub = stompClient.subscribe(`/topic/robot/${robotId}/status`, (msg) => {
@@ -250,17 +363,18 @@
         loadTodayStats();
         loadHistoryChart(currentChartMode);
         document.getElementById('event-list').innerHTML = '';
+        document.getElementById('event-count').textContent = '0';
     }
 
-    // ── 상태 업데이트 ──────────────────────────────────────────────────
+    // ── Status Update ─────────────────────────────────────────────
     function updateStatus(data) {
         lastStatus = data;
-        document.getElementById('val-pos-x').textContent   = data.posX.toFixed(4);
-        document.getElementById('val-pos-y').textContent   = data.posY.toFixed(4);
-        document.getElementById('val-linear').textContent  = data.linearVel.toFixed(3);
-        document.getElementById('val-angular').textContent = data.angularVel.toFixed(3);
+        document.getElementById('val-pos-x').textContent   = data.posX.toFixed(4) + ' m';
+        document.getElementById('val-pos-y').textContent   = data.posY.toFixed(4) + ' m';
+        document.getElementById('val-linear').textContent  = data.linearVel.toFixed(3) + ' m/s';
+        document.getElementById('val-angular').textContent = data.angularVel.toFixed(3) + ' r/s';
         const yawDeg = (data.yaw * 180 / Math.PI).toFixed(1);
-        document.getElementById('val-yaw').textContent = yawDeg;
+        document.getElementById('val-yaw').textContent = yawDeg + ' °';
         document.getElementById('val-last-time').textContent = new Date().toLocaleTimeString();
         if (data.robotState) updateStateBadge(data.robotState);
         updateBattery(data.battery);
@@ -271,26 +385,28 @@
 
     function updateStateBadge(state) {
         const badge = document.getElementById('state-badge');
-        badge.textContent = state;
-        badge.className = 'state-badge state-' + state.toLowerCase().replace('_', '-');
+        badge.textContent = state.replace('_', ' ');
+        badge.className = 'state-badge state-' + state.toLowerCase().replace(/_/g, '-');
     }
 
-    // ── 배터리 ─────────────────────────────────────────────────────────
+    // ── Battery ───────────────────────────────────────────────────
     function updateBattery(pct) {
-        document.getElementById('val-battery').textContent = pct + '%';
+        const el = document.getElementById('val-battery');
+        el.textContent = pct + '%';
+        el.style.color = pct > 50 ? 'var(--green)' : pct > 20 ? 'var(--amber)' : 'var(--red)';
         const fill = document.getElementById('battery-fill');
         fill.style.width = pct + '%';
-        fill.style.backgroundColor = pct > 50 ? '#4caf50' : pct > 20 ? '#ff9800' : '#f44336';
+        fill.style.backgroundColor = pct > 50 ? 'var(--green)' : pct > 20 ? 'var(--amber)' : 'var(--red)';
     }
 
-    // ── 2D 맵 ──────────────────────────────────────────────────────────
+    // ── 2D Map ────────────────────────────────────────────────────
     const mapCanvas = document.getElementById('map-canvas');
-    const mapCtx = mapCanvas.getContext('2d');
+    const mapCtx    = mapCanvas.getContext('2d');
     mapCtx.imageSmoothingEnabled = false;
-    const MAP_SCALE = 30;
+    const MAP_SCALE   = 30;
     const MAP_CENTER_X = mapCanvas.width / 2;
     const MAP_CENTER_Y = mapCanvas.height / 2;
-    const pathPoints = [];
+    const pathPoints  = [];
 
     function loadMapImage(robotId) {
         const img = new Image();
@@ -305,14 +421,14 @@
         const mapPxX = (x - mapInfo.originX) / mapInfo.resolution;
         const mapPxY = mapInfo.height - (y - mapInfo.originY) / mapInfo.resolution;
         return {
-            px: (mapPxX / mapInfo.width) * mapCanvas.width,
+            px: (mapPxX / mapInfo.width)  * mapCanvas.width,
             py: (mapPxY / mapInfo.height) * mapCanvas.height
         };
     }
 
     function canvasToWorld(px, py) {
         if (!mapInfo) return { x: 0, y: 0 };
-        const mapPxX = (px / mapCanvas.width) * mapInfo.width;
+        const mapPxX = (px / mapCanvas.width)  * mapInfo.width;
         const mapPxY = (py / mapCanvas.height) * mapInfo.height;
         return {
             x: mapPxX * mapInfo.resolution + mapInfo.originX,
@@ -327,7 +443,7 @@
         if (mapImage && mapInfo) {
             mapCtx.drawImage(mapImage, 0, 0, mapCanvas.width, mapCanvas.height);
         } else {
-            mapCtx.strokeStyle = '#1a1a2e';
+            mapCtx.strokeStyle = '#0e1a2e';
             mapCtx.lineWidth = 0.5;
             for (let i = 0; i < mapCanvas.width; i += MAP_SCALE) {
                 mapCtx.beginPath(); mapCtx.moveTo(i, 0); mapCtx.lineTo(i, mapCanvas.height); mapCtx.stroke();
@@ -348,10 +464,10 @@
                 const wy = posY + r * Math.sin(angle);
                 const { px, py } = worldToCanvas(wx, wy);
                 const norm = Math.min(r / 3.5, 1);
-                const hue = norm * 110;
+                const hue  = norm * 110;
                 mapCtx.beginPath();
                 mapCtx.arc(px, py, 2, 0, Math.PI * 2);
-                mapCtx.fillStyle = `hsla(${hue},100%,60%,0.75)`;
+                mapCtx.fillStyle = `hsla(${hue},100%,60%,0.8)`;
                 mapCtx.fill();
             });
         }
@@ -359,42 +475,49 @@
         // 3. 주행 경로
         if (pathPoints.length > 1) {
             mapCtx.beginPath();
-            mapCtx.strokeStyle = 'rgba(0,188,212,0.6)';
+            mapCtx.strokeStyle = 'rgba(0,212,255,0.5)';
             mapCtx.lineWidth = 1.5;
             mapCtx.moveTo(pathPoints[0].px, pathPoints[0].py);
             pathPoints.forEach(p => mapCtx.lineTo(p.px, p.py));
             mapCtx.stroke();
         }
 
-        // 4. 목표 마커
+        // 4. Nav2 목표 마커
         if (navGoalMarker) {
             const { px, py } = worldToCanvas(navGoalMarker.x, navGoalMarker.y);
-            mapCtx.strokeStyle = '#ffeb3b';
+            mapCtx.strokeStyle = '#ffab40';
             mapCtx.lineWidth = 2;
-            mapCtx.beginPath(); mapCtx.moveTo(px-10, py); mapCtx.lineTo(px+10, py); mapCtx.stroke();
-            mapCtx.beginPath(); mapCtx.moveTo(px, py-10); mapCtx.lineTo(px, py+10); mapCtx.stroke();
-            mapCtx.beginPath(); mapCtx.arc(px, py, 8, 0, Math.PI * 2);
-            mapCtx.strokeStyle = 'rgba(255,235,59,0.5)'; mapCtx.stroke();
+            mapCtx.beginPath(); mapCtx.moveTo(px-12, py); mapCtx.lineTo(px+12, py); mapCtx.stroke();
+            mapCtx.beginPath(); mapCtx.moveTo(px, py-12); mapCtx.lineTo(px, py+12); mapCtx.stroke();
+            mapCtx.beginPath(); mapCtx.arc(px, py, 9, 0, Math.PI * 2);
+            mapCtx.strokeStyle = 'rgba(255,171,64,0.5)'; mapCtx.stroke();
         }
 
-        // 5. 로봇 (방향 화살표)
+        // 5. 로봇 화살표
         if (pathPoints.length > 0 && lastStatus) {
             const { px, py } = worldToCanvas(lastStatus.posX, lastStatus.posY);
             const yaw = lastStatus.yaw || 0;
             mapCtx.save();
             mapCtx.translate(px, py);
             mapCtx.rotate(Math.PI / 2 - yaw);
+
+            // 외부 글로우
+            mapCtx.shadowColor = '#00d4ff';
+            mapCtx.shadowBlur  = 10;
+
+            // 화살표 몸통
             mapCtx.beginPath();
-            mapCtx.moveTo(0, -13);
+            mapCtx.moveTo(0, -14);
             mapCtx.lineTo(-8, 7);
             mapCtx.lineTo(0, 3);
             mapCtx.lineTo(8, 7);
             mapCtx.closePath();
-            mapCtx.fillStyle = '#ff5722';
+            mapCtx.fillStyle = '#ff3d57';
             mapCtx.strokeStyle = '#fff';
             mapCtx.lineWidth = 1.5;
             mapCtx.fill();
             mapCtx.stroke();
+
             mapCtx.restore();
         }
     }
@@ -415,22 +538,22 @@
     function toggleScan() {
         showScan = !showScan;
         const btn = document.getElementById('btn-scan-toggle');
-        btn.style.color = showScan ? '#4caf50' : '#555';
+        btn.classList.toggle('active', showScan);
         redrawMap();
     }
 
-    // 맵 클릭 → Nav2 목표 전송
+    // 맵 클릭 → Nav2 목표
     mapCanvas.addEventListener('click', (e) => {
         if (!mapInfo) return;
-        const rect = mapCanvas.getBoundingClientRect();
-        const scaleX = mapCanvas.width / rect.width;
+        const rect   = mapCanvas.getBoundingClientRect();
+        const scaleX = mapCanvas.width  / rect.width;
         const scaleY = mapCanvas.height / rect.height;
         const px = (e.clientX - rect.left) * scaleX;
-        const py = (e.clientY - rect.top) * scaleY;
+        const py = (e.clientY - rect.top)  * scaleY;
         const world = canvasToWorld(px, py);
         navGoalMarker = world;
-        document.getElementById('goal-x').value = world.x.toFixed(2);
-        document.getElementById('goal-y').value = world.y.toFixed(2);
+        document.getElementById('goal-x').value     = world.x.toFixed(2);
+        document.getElementById('goal-y').value     = world.y.toFixed(2);
         document.getElementById('goal-theta').value = '0';
         redrawMap();
         fetch(`/api/robot/${currentRobotId}/command/goal`, {
@@ -440,68 +563,108 @@
         });
     });
 
-    // ── 나침반 ──────────────────────────────────────────────────────────
+    // ── 나침반 ────────────────────────────────────────────────────
     const compassCanvas = document.getElementById('compass-canvas');
-    const compassCtx = compassCanvas.getContext('2d');
+    const compassCtx    = compassCanvas.getContext('2d');
 
     function updateCompass(yaw) {
         const cx = compassCanvas.width / 2, cy = compassCanvas.height / 2, r = cx - 4;
         compassCtx.clearRect(0, 0, compassCanvas.width, compassCanvas.height);
+
+        // 배경
         compassCtx.beginPath();
         compassCtx.arc(cx, cy, r, 0, Math.PI * 2);
-        compassCtx.fillStyle = '#0a0a16';
+        compassCtx.fillStyle = 'rgba(6,10,18,0.9)';
         compassCtx.fill();
-        compassCtx.strokeStyle = '#1e1e3a';
-        compassCtx.lineWidth = 1.5;
+        compassCtx.strokeStyle = '#1a2840';
+        compassCtx.lineWidth = 1;
         compassCtx.stroke();
-        ['N','E','S','W'].forEach((dir, i) => {
-            const a = i * Math.PI / 2;
-            const tx = cx + (r - 10) * Math.sin(a);
-            const ty = cy - (r - 10) * Math.cos(a) + 4;
-            compassCtx.fillStyle = dir === 'N' ? '#f44336' : '#555';
-            compassCtx.font = 'bold 9px sans-serif';
-            compassCtx.textAlign = 'center';
-            compassCtx.fillText(dir, tx, ty);
+
+        // 눈금 방위
+        const dirs = ['N','E','S','W'];
+        compassCtx.font = 'bold 9px JetBrains Mono, monospace';
+        compassCtx.textAlign = 'center';
+        compassCtx.textBaseline = 'middle';
+        dirs.forEach((d, i) => {
+            const angle = (i * Math.PI / 2) - yaw;
+            const tx = cx + (r - 10) * Math.sin(angle);
+            const ty = cy - (r - 10) * Math.cos(angle);
+            compassCtx.fillStyle = d === 'N' ? '#ff3d57' : '#617090';
+            compassCtx.fillText(d, tx, ty);
         });
+
+        // 나침반 바늘 (항상 북쪽 고정)
         compassCtx.save();
         compassCtx.translate(cx, cy);
         compassCtx.rotate(-yaw);
+
+        // 북쪽 (빨강)
         compassCtx.beginPath();
-        compassCtx.moveTo(0, -(r - 16));
-        compassCtx.lineTo(-4, 4); compassCtx.lineTo(0, 0); compassCtx.lineTo(4, 4);
+        compassCtx.moveTo(0, -(r - 18));
+        compassCtx.lineTo(-4, 0);
+        compassCtx.lineTo(4, 0);
         compassCtx.closePath();
-        compassCtx.fillStyle = '#f44336'; compassCtx.fill();
+        compassCtx.fillStyle = '#ff3d57';
+        compassCtx.fill();
+
+        // 남쪽 (회색)
         compassCtx.beginPath();
-        compassCtx.moveTo(0, r - 16);
-        compassCtx.lineTo(-4, -4); compassCtx.lineTo(0, 0); compassCtx.lineTo(4, -4);
+        compassCtx.moveTo(0, r - 18);
+        compassCtx.lineTo(-4, 0);
+        compassCtx.lineTo(4, 0);
         compassCtx.closePath();
-        compassCtx.fillStyle = '#aaa'; compassCtx.fill();
+        compassCtx.fillStyle = '#2e3f5c';
+        compassCtx.fill();
+
         compassCtx.restore();
+
+        // 중심 점
+        compassCtx.beginPath();
+        compassCtx.arc(cx, cy, 3, 0, Math.PI * 2);
+        compassCtx.fillStyle = '#00d4ff';
+        compassCtx.fill();
+
+        // 각도 표시
         const deg = ((yaw * 180 / Math.PI) % 360 + 360) % 360;
-        compassCtx.fillStyle = '#00bcd4';
-        compassCtx.font = 'bold 10px monospace';
+        compassCtx.fillStyle = '#00d4ff';
+        compassCtx.font = 'bold 8px JetBrains Mono, monospace';
         compassCtx.textAlign = 'center';
+        compassCtx.textBaseline = 'middle';
         compassCtx.fillText(Math.round(deg) + '°', cx, cy + 4);
     }
     updateCompass(0);
 
-    // ── 속도 차트 ──────────────────────────────────────────────────────
+    // ── 속도 차트 ──────────────────────────────────────────────────
     const speedLabels = [];
-    const speedData = [];
-    const speedChart = new Chart(document.getElementById('speed-chart'), {
+    const speedData   = [];
+    const speedChart  = new Chart(document.getElementById('speed-chart'), {
         type: 'line',
         data: {
             labels: speedLabels,
-            datasets: [{ label: '선속도 (m/s)', data: speedData, borderColor: '#00bcd4',
-                backgroundColor: 'rgba(0,188,212,0.1)', tension: 0.3, pointRadius: 0, fill: true }]
+            datasets: [{
+                label: 'Linear vel (m/s)',
+                data: speedData,
+                borderColor: '#00d4ff',
+                backgroundColor: 'rgba(0,212,255,0.08)',
+                tension: 0.3,
+                pointRadius: 0,
+                fill: true,
+                borderWidth: 1.5
+            }]
         },
         options: {
             animation: false,
             scales: {
-                x: { ticks: { color: '#aaa', maxTicksLimit: 6 }, grid: { color: '#2a2a3e' } },
-                y: { ticks: { color: '#aaa' }, grid: { color: '#2a2a3e' }, min: -0.5, max: 1.0 }
+                x: { display: false },
+                y: {
+                    ticks: { color: '#617090', font: { family: 'JetBrains Mono', size: 10 } },
+                    grid:  { color: '#1a2840' },
+                    min: -0.5, max: 1.0
+                }
             },
-            plugins: { legend: { labels: { color: '#aaa' } } }
+            plugins: {
+                legend: { display: false }
+            }
         }
     });
 
@@ -512,7 +675,7 @@
         speedChart.update();
     }
 
-    // ── 주간/월간 히스토리 차트 ─────────────────────────────────────────
+    // ── 주간/월간 히스토리 차트 ────────────────────────────────────
     let currentChartMode = 'weekly';
     let historyChart = null;
 
@@ -530,19 +693,20 @@
             data: {
                 labels: labels,
                 datasets: [{
-                    label: '주행 거리 (m)',
+                    label: 'Distance (m)',
                     data: distances,
-                    backgroundColor: 'rgba(0,188,212,0.6)',
-                    borderColor: '#00bcd4',
-                    borderWidth: 1
+                    backgroundColor: 'rgba(0,212,255,0.25)',
+                    borderColor: '#00d4ff',
+                    borderWidth: 1,
+                    borderRadius: 3
                 }]
             },
             options: {
                 scales: {
-                    x: { ticks: { color: '#aaa' }, grid: { color: '#2a2a3e' } },
-                    y: { ticks: { color: '#aaa' }, grid: { color: '#2a2a3e' }, beginAtZero: true }
+                    x: { ticks: { color: '#617090', font: { size: 9 } }, grid: { color: '#1a2840' } },
+                    y: { ticks: { color: '#617090', font: { size: 9 } }, grid: { color: '#1a2840' }, beginAtZero: true }
                 },
-                plugins: { legend: { labels: { color: '#aaa' } } }
+                plugins: { legend: { display: false } }
             }
         });
     }
@@ -553,7 +717,7 @@
         loadHistoryChart(mode);
     }
 
-    // ── 오늘 통계 ──────────────────────────────────────────────────────
+    // ── 오늘 통계 ──────────────────────────────────────────────────
     function loadTodayStats() {
         fetch(`/api/robot/${currentRobotId}/stats/today`)
             .then(r => r.json())
@@ -564,13 +728,17 @@
     }
     setInterval(loadTodayStats, 10000);
 
-    // ── 이벤트 로그 ────────────────────────────────────────────────────
+    // ── 이벤트 로그 ────────────────────────────────────────────────
+    let eventCount = 0;
+
     function addEventLog(event) {
+        eventCount++;
+        document.getElementById('event-count').textContent = eventCount;
         const list = document.getElementById('event-list');
         const li = document.createElement('li');
         li.className = 'event-item event-' + event.eventType.toLowerCase();
         li.dataset.eventId = event.id || '';
-        li.innerHTML = `<span>[${new Date().toLocaleTimeString()}] ${event.eventType} — ${event.message}</span>` +
+        li.innerHTML = `<span>[${new Date().toLocaleTimeString()}] <b>${event.eventType}</b> — ${event.message}</span>` +
             (event.id ? `<button class="ack-btn" onclick="ackEvent('${event.id}', this)">ACK</button>` : '');
         list.prepend(li);
         if (list.children.length > 20) list.removeChild(list.lastChild);
@@ -581,7 +749,7 @@
             .then(r => { if (r.ok) { btn.textContent = '✓'; btn.disabled = true; btn.closest('li').classList.add('event-acked'); } });
     }
 
-    // ── 속도 제어 (D-패드 + 키보드) ────────────────────────────────────
+    // ── 속도 제어 (D-패드 + 키보드) ────────────────────────────────
     const keysDown = new Set();
     let velLoop = null;
 
@@ -621,8 +789,8 @@
     }
 
     const CTRL_KEYS = ['w','s','a','d','ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '];
-    const KEY_DPAD = { w:'dpad-up', s:'dpad-down', a:'dpad-left', d:'dpad-right',
-                       ArrowUp:'dpad-up', ArrowDown:'dpad-down', ArrowLeft:'dpad-left', ArrowRight:'dpad-right' };
+    const KEY_DPAD  = { w:'dpad-up', s:'dpad-down', a:'dpad-left', d:'dpad-right',
+                        ArrowUp:'dpad-up', ArrowDown:'dpad-down', ArrowLeft:'dpad-left', ArrowRight:'dpad-right' };
 
     document.addEventListener('keydown', (e) => {
         if (!CTRL_KEYS.includes(e.key)) return;
@@ -640,7 +808,7 @@
         if (keysDown.size === 0) dpadStop();
     });
 
-    // ── 로봇 명령 ──────────────────────────────────────────────────────
+    // ── 로봇 명령 ──────────────────────────────────────────────────
     function sendEstop() {
         fetch(`/api/robot/${currentRobotId}/command/estop`, { method: 'POST' })
             .then(() => updateStateBadge('EMERGENCY_STOP'));
@@ -652,8 +820,8 @@
     }
 
     function sendGoal() {
-        const x = parseFloat(document.getElementById('goal-x').value) || 0;
-        const y = parseFloat(document.getElementById('goal-y').value) || 0;
+        const x     = parseFloat(document.getElementById('goal-x').value) || 0;
+        const y     = parseFloat(document.getElementById('goal-y').value) || 0;
         const theta = parseFloat(document.getElementById('goal-theta').value) || 0;
         fetch(`/api/robot/${currentRobotId}/command/goal`, {
             method: 'POST',
@@ -662,7 +830,7 @@
         });
     }
 
-    // ── 시계 ───────────────────────────────────────────────────────────
+    // ── 시계 ───────────────────────────────────────────────────────
     setInterval(() => {
         document.getElementById('clock').textContent = new Date().toLocaleString('ko-KR');
     }, 1000);
@@ -674,6 +842,5 @@
 
     connect();
 </script>
-
 </body>
 </html>
