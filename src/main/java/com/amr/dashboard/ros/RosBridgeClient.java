@@ -97,8 +97,9 @@ public class RosBridgeClient {
                 "{\"op\":\"subscribe\",\"topic\":\"%s\",\"type\":\"sensor_msgs/BatteryState\"}",
                 batteryTopic));
         if (mapTopic != null) {
+            // throttle_rate:5000 → 최대 0.2Hz, queue_length:1 → 최신 메시지만 유지 (맵은 대용량)
             send(String.format(
-                    "{\"op\":\"subscribe\",\"topic\":\"%s\",\"type\":\"nav_msgs/OccupancyGrid\"}",
+                    "{\"op\":\"subscribe\",\"topic\":\"%s\",\"type\":\"nav_msgs/OccupancyGrid\",\"throttle_rate\":5000,\"queue_length\":1}",
                     mapTopic));
         }
         if (scanTopic != null) {
