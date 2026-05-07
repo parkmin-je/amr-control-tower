@@ -168,7 +168,7 @@ body {
 #card-events    { grid-column: 1 / 4; grid-row: 4; }
 
 /* ── Card 배치 (command) ───────────────────────────────────────── */
-#card-command   { grid-column: 1 / 4; grid-row: 5; }
+#card-command   { grid-column: 1 / 4; grid-row: 5; min-height: 180px; }
 
 /* ── State Badge ────────────────────────────────────────────────── */
 .state-badge {
@@ -245,6 +245,64 @@ body {
 .ack-btn:hover { border-color: #00bcd4; color: #00bcd4; }
 .event-acked { opacity: 0.5; }
 .event-yolo_detected { border-left: 3px solid #9c27b0; }
+
+/* ── Control Layout ─────────────────────────────────────────────── */
+.control-layout {
+    display: flex;
+    gap: 32px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+}
+.control-left  { flex: 1; min-width: 260px; }
+.control-right { display: flex; flex-direction: column; gap: 12px; align-items: center; }
+
+/* ── Speed Sliders ──────────────────────────────────────────────── */
+.speed-sliders {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 220px;
+}
+.slider-label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.8rem;
+    color: #888;
+}
+.slider-label span { color: #00bcd4; font-weight: 700; font-family: monospace; }
+.slider-label input[type=range] {
+    accent-color: #00bcd4;
+    width: 100%;
+    cursor: pointer;
+}
+
+/* ── D-Pad ──────────────────────────────────────────────────────── */
+.dpad-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.kb-hint   { font-size: 0.72rem; color: #555; letter-spacing: 0.03em; }
+
+.dpad { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.dpad-row { display: flex; gap: 4px; justify-content: center; }
+
+.dpad-btn {
+    width: 52px;
+    height: 52px;
+    background: #1a1a2e;
+    border: 1px solid #2a2a4a;
+    border-radius: 8px;
+    color: #00bcd4;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: background 0.1s, border-color 0.1s, transform 0.05s;
+    user-select: none;
+    -webkit-user-select: none;
+}
+.dpad-btn:hover { background: #22223e; border-color: #00bcd4; }
+.dpad-btn:active,
+.dpad-btn.dpad-active { background: #00bcd4; color: #0d0d1a; border-color: #00bcd4; transform: scale(0.94); }
+.dpad-stop { color: #f44336; border-color: #f44336; }
+.dpad-stop:hover { background: #3a1b1b; border-color: #f44336; }
+.dpad-stop:active { background: #f44336; color: #fff; }
 
 /* ── Scrollbar ─────────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; }

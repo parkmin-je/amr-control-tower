@@ -16,6 +16,7 @@ public class RobotCommandService {
 
     private final RosBridgeManager rosBridgeManager;
     private final RobotStatusService robotStatusService;
+    private final RobotMetricsService metricsService;
 
     /** 긴급 정지: /cmd_vel 에 zero twist 발행 */
     @CircuitBreaker(name = CB_NAME, fallbackMethod = "stopFallback")
@@ -23,6 +24,7 @@ public class RobotCommandService {
         String zeroTwist = "{\"linear\":{\"x\":0,\"y\":0,\"z\":0},\"angular\":{\"x\":0,\"y\":0,\"z\":0}}";
         rosBridgeManager.publishToRobot(robotId, "/cmd_vel", "geometry_msgs/Twist", zeroTwist);
         robotStatusService.setEmergencyStop(robotId);
+        metricsService.recordCommand(robotId, "ESTOP");
         log.info("[Command][{}] 긴급 정지 명령 전송", robotId);
     }
 
@@ -30,6 +32,14 @@ public class RobotCommandService {
         log.error("[CircuitBreaker][{}] E-Stop 전송 불가 (Circuit Open): {}", robotId, e.getMessage());
         robotStatusService.publishEvent(robotId, RobotEvent.EventType.ERROR,
                 "E-Stop 전송 불가 (rosbridge 연결 오류): " + e.getMessage());
+    }
+
+    /** /cmd_vel 직접 속도 제어 */
+    public void sendVelocity(String robotId, double linear, double angular) {
+        String twist = String.format(
+                "{\"linear\":{\"x\":%.4f,\"y\":0.0,\"z\":0.0},\"angular\":{\"x\":0.0,\"y\":0.0,\"z\":%.4f}}",
+                linear, angular);
+        rosBridgeManager.publishToRobot(robotId, "/cmd_vel", "geometry_msgs/Twist", twist);
     }
 
     /** 긴급 정지 해제 */
@@ -54,6 +64,7 @@ public class RobotCommandService {
         rosBridgeManager.publishToRobot(robotId, "/move_base_simple/goal",
                 "geometry_msgs/PoseStamped", poseStamped);
         robotStatusService.clearEmergencyStop(robotId);
+        metricsService.recordCommand(robotId, "NAV_GOAL");
         log.info("[Command][{}] 내비게이션 목표 전송: x={}, y={}, theta={}", robotId, x, y, theta);
     }
 
