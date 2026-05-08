@@ -326,16 +326,20 @@
                             <td sec:authorize="hasAnyRole('OPERATOR','ADMIN')">
                                 <button class="action-btn success"
                                         th:if="${t.status.name() == 'QUEUED' or t.status.name() == 'PAUSED'}"
-                                        th:onclick="'taskAction(' + ${t.id} + ', \'execute\')'">Run</button>
+                                        th:data-tid="${t.id}" data-action="execute"
+                                        onclick="taskAction(this.dataset.tid, this.dataset.action)">Run</button>
                                 <button class="action-btn"
                                         th:if="${t.status.name() == 'EXECUTING'}"
-                                        th:onclick="'taskAction(' + ${t.id} + ', \'pause\')'">Pause</button>
+                                        th:data-tid="${t.id}" data-action="pause"
+                                        onclick="taskAction(this.dataset.tid, this.dataset.action)">Pause</button>
                                 <button class="action-btn"
                                         th:if="${t.status.name() == 'EXECUTING'}"
-                                        th:onclick="'taskAction(' + ${t.id} + ', \'complete\')'">Done</button>
+                                        th:data-tid="${t.id}" data-action="complete"
+                                        onclick="taskAction(this.dataset.tid, this.dataset.action)">Done</button>
                                 <button class="action-btn danger"
                                         th:if="${t.status.name() != 'COMPLETED' and t.status.name() != 'CANCELLED'}"
-                                        th:onclick="'taskAction(' + ${t.id} + ', \'cancel\')'">Cancel</button>
+                                        th:data-tid="${t.id}" data-action="cancel"
+                                        onclick="taskAction(this.dataset.tid, this.dataset.action)">Cancel</button>
                             </td>
                         </tr>
                     </tbody>

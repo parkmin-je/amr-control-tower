@@ -182,9 +182,11 @@
                                     </td>
                                     <td>
                                         <button class="action-btn"
-                                                th:onclick="'toggleUser(' + ${u.id} + ')'">Toggle</button>
+                                                th:data-uid="${u.id}"
+                                                onclick="toggleUser(this.dataset.uid)">Toggle</button>
                                         <button class="action-btn danger"
-                                                th:onclick="'changeRolePrompt(' + ${u.id} + ')'">Role</button>
+                                                th:data-uid="${u.id}"
+                                                onclick="changeRolePrompt(this.dataset.uid)">Role</button>
                                     </td>
                                 </tr>
                             </tbody>
@@ -233,7 +235,8 @@
                                     </td>
                                     <td>
                                         <button class="action-btn danger"
-                                                th:onclick="'deregisterRobot(\'' + ${r.robotId} + '\')'">Disable</button>
+                                                th:data-rid="${r.robotId}"
+                                                onclick="deregisterRobot(this.dataset.rid)">Disable</button>
                                     </td>
                                 </tr>
                             </tbody>
@@ -269,7 +272,7 @@ function changeRolePrompt(id) {
     fetch(`/api/admin/users/${id}/role`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role: role.toUpperCase() })
+        body: JSON.stringify({ role: role.trim().toUpperCase() })
     }).then(r => { if (r.ok) location.reload(); else alert('Invalid role'); });
 }
 

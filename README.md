@@ -186,9 +186,9 @@ docker compose up --build
 
 | 계정 | 비밀번호 | 역할 | 권한 |
 |------|----------|------|------|
-| admin | admin | ADMIN | 전체 기능 + 사용자·로봇 관리 |
-| operator | operator | OPERATOR | 제어·태스크 생성·실행 |
-| viewer | viewer | VIEWER | 조회 전용 |
+| admin | admin123 | ADMIN | 전체 기능 + 사용자·로봇 관리 |
+| operator | operator123 | OPERATOR | 제어·태스크 생성·실행 |
+| viewer | viewer123 | VIEWER | 조회 전용 |
 
 > Admin 패널(`/admin`)에서 계정 추가·역할 변경·비밀번호 변경 가능
 
