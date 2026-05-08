@@ -63,6 +63,12 @@ dependencies {
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'com.mysql:mysql-connector-j'
 
+    // Redis Session — 분산 세션 저장소 (prod 프로파일)
+    // Why: 세션을 WAS 메모리에 두면 재시작/스케일아웃 시 로그인 세션 소멸
+    //      Redis에 저장하면 무중단 배포·로드밸런싱 환경에서도 세션 유지
+    implementation 'org.springframework.session:spring-session-data-redis'
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
     // Flyway — prod 환경 DB 스키마 버전 관리
     // Why: ddl-auto:update 는 컬럼 삭제를 처리 못하고 운영 중 스키마 드리프트가 발생함.
     //      Flyway로 V1__init.sql ~ Vn__.sql 순차 적용 → ddl-auto:validate 와 짝을 이룸.

@@ -3,6 +3,57 @@ version: '3.8'
 services:
 
   # ── Infrastructure ────────────────────────────────────────────────
+  # Redis — 세션 저장소 + Gateway Rate Limiter 카운터
+  # Why Redis: 인메모리 Key-Value 로 세션/카운터 연산이 O(1),
+  #            AOF 옵션으로 재시작 시 카운터 유실 없이 Rate Limit 우회 방지
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    networks:
+      - amr-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # ── HTTPS 진입점 ──────────────────────────────────────────────────
+  # Nginx — TLS 종단 + 리버스 프록시 + WebSocket 지원
+  # 인증서: Let's Encrypt (certbot 컨테이너로 발급·갱신)
+  # 초기 발급 명령 (최초 1회):
+  #   docker-compose run --rm certbot certonly --webroot \
+  #     -w /var/www/certbot -d ${DOMAIN} \
+  #     --email ${CERTBOT_EMAIL} --agree-tos --no-eff-email
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - DOMAIN=${DOMAIN:-localhost}
+    volumes:
+      - ./nginx/templates:/etc/nginx/templates:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+    depends_on:
+      - amr-dashboard
+    networks:
+      - amr-net
+
+  certbot:
+    image: certbot/certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    entrypoint: >
+      /bin/sh -c "trap exit TERM;
+      while :; do certbot renew --quiet; sleep 12h & wait $${!}; done;"
+    networks:
+      - amr-net
+
+
   zookeeper:
     image: confluentinc/cp-zookeeper:7.6.0
     environment:
@@ -95,8 +146,11 @@ services:
       - "8000:8000"
     environment:
       - EUREKA_SERVER_URL=http://eureka-server:8761/eureka/
+      - REDIS_HOST=redis
     depends_on:
       eureka-server:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - amr-net
@@ -115,12 +169,16 @@ services:
       - MYSQL_USER=${MYSQL_USER:-amr}
       - MYSQL_PASSWORD=${MYSQL_PASSWORD:-amrpass}
       - ROSBRIDGE_ROBOT_01_URI=${ROSBRIDGE_ROBOT_01_URI:-ws://192.168.109.130:9090}
+      - REDIS_HOST=redis
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-}
     depends_on:
       kafka:
         condition: service_healthy
       mysql:
         condition: service_healthy
       eureka-server:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - amr-net
@@ -132,3 +190,4 @@ networks:
 volumes:
   mysql-data:
   grafana-data:
+  redis-data:

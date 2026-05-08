@@ -17,6 +17,9 @@ spring:
   flyway:
     enabled: false
 
+  session:
+    store-type: none
+
 # dev 환경에서는 Eureka 서버 없이 실행
 eureka:
   client:
