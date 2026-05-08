@@ -20,6 +20,7 @@ public class SecurityConfig {
         http
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/login", "/css/**", "/js/**", "/favicon.ico").permitAll()
+                .requestMatchers("/h2-console/**").permitAll()
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                 .requestMatchers("/api/robot/*/command/**").hasAnyRole("OPERATOR", "ADMIN")
                 .requestMatchers("/api/tasks/**").hasAnyRole("OPERATOR", "ADMIN")
@@ -38,7 +39,10 @@ public class SecurityConfig {
                 .permitAll()
             )
             .csrf(csrf -> csrf
-                .ignoringRequestMatchers("/api/**", "/ws/**")
+                .ignoringRequestMatchers("/api/**", "/ws/**", "/h2-console/**")
+            )
+            .headers(headers -> headers
+                .frameOptions(frame -> frame.sameOrigin())
             );
 
         return http.build();
