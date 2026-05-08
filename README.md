@@ -413,3 +413,14 @@ amr-control-tower/
 - [x] 배터리 파싱 강화 — percentage/voltage 다중 포맷 대응, 0~100 자동 보정
 - [x] 토픽 이름 설정 가능 — goalTopic·cmdVelTopic DB 저장, 로봇별 독립 설정
 - [x] Nav2 토픽 수정 — `/move_base_simple/goal` → `/goal_pose` (ROS2 표준)
+- [x] Nav2 결과 피드백 — `/navigate_to_pose/_action/feedback·status` 구독, 남은 거리 프로그레스바, Task 자동 완료/실패 전환
+- [x] Global ExceptionHandler — RFC 7807 ProblemDetail 표준 에러 응답
+- [x] Bean Validation — 속도·좌표 범위 검증 (@Valid)
+- [x] Admin 토픽 편집 UI — 로봇 등록 폼에서 6개 토픽 이름 직접 설정 가능
+
+### 다음 작업 목록
+- [ ] 명령 결과 토스트 UI — E-Stop·Resume 버튼 성공/실패 알림
+- [ ] 로봇별 사용자 권한 분리 — Operator가 담당 로봇만 제어하도록
+- [ ] Fleet 일괄 E-Stop — 전체 로봇 동시 긴급 정지
+- [ ] 모바일 반응형 개선 — 태블릿 레이아웃 대응
+- [ ] 실 로봇 연결 테스트 — Nav2 목표 전송·도착 확인, 배터리 포맷 검증
