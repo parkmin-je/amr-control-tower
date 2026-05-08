@@ -1,0 +1,63 @@
+# Nginx Reverse Proxy — AMR Control Tower
+# Docker 공식 nginx:alpine 이미지는 /etc/nginx/templates/*.template 파일을
+# 컨테이너 시작 시 envsubst로 /etc/nginx/conf.d/*.conf 로 자동 변환함.
+# 환경변수 DOMAIN 이 .env 에 설정되어 있어야 함.
+
+# ── HTTP: Let's Encrypt ACME + HTTPS 리다이렉트 ──────────────────────
+server {
+    listen 80;
+    server_name ${DOMAIN};
+
+    # certbot이 소유권 인증 토큰을 서빙하는 경로
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# ── HTTPS: SSL 종단 + 리버스 프록시 ─────────────────────────────────
+server {
+    listen 443 ssl;
+    http2  on;
+    server_name ${DOMAIN};
+
+    ssl_certificate     /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
+
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_ciphers         HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers on;
+    ssl_session_cache   shared:SSL:10m;
+    ssl_session_timeout 10m;
+
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header X-Frame-Options SAMEORIGIN always;
+    add_header X-Content-Type-Options nosniff always;
+
+    client_max_body_size 10m;
+
+    # ── 일반 HTTP 요청 → Spring Boot ─────────────────────────────────
+    location / {
+        proxy_pass         http://amr-dashboard:8080;
+        proxy_set_header   Host              $host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_read_timeout 300s;
+    }
+
+    # ── WebSocket (STOMP/SockJS 실시간 통신) ──────────────────────────
+    location /ws {
+        proxy_pass             http://amr-dashboard:8080;
+        proxy_http_version     1.1;
+        proxy_set_header       Upgrade    $http_upgrade;
+        proxy_set_header       Connection "upgrade";
+        proxy_set_header       Host       $host;
+        proxy_set_header       X-Forwarded-Proto $scheme;
+        proxy_read_timeout     3600s;
+        proxy_send_timeout     3600s;
+    }
+}
