@@ -34,6 +34,7 @@ public class RobotStatusService {
     private final SimpMessagingTemplate messagingTemplate;
     private final MapService mapService;
     private final RobotMetricsService metricsService;
+    private final NotificationService notificationService;
 
     // 최신 상태를 메모리에 캐싱
     private final Map<String, RobotStatusCache> cache = new ConcurrentHashMap<>();
@@ -136,6 +137,7 @@ public class RobotStatusService {
         // 배터리 20% 이하 이벤트
         if (current.battery <= 20 && !current.lowBatteryAlerted) {
             publishEvent(robotId, RobotEvent.EventType.LOW_BATTERY, "배터리 부족: " + current.battery + "%");
+            notificationService.alertLowBattery(robotId, current.battery);
             current.lowBatteryAlerted = true;
         } else if (current.battery > 20) {
             current.lowBatteryAlerted = false;
@@ -174,6 +176,12 @@ public class RobotStatusService {
                 .build();
 
         metricsService.recordEvent(robotId, type.name());
+
+        if (type == RobotEvent.EventType.ERROR) {
+            notificationService.alertError(robotId, message);
+        } else if (type == RobotEvent.EventType.STOPPED) {
+            notificationService.alertStopped(robotId);
+        }
 
         if (producer.isPresent()) {
             producer.get().sendEvent(dto);

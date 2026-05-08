@@ -88,6 +88,10 @@ management:
     sampling:
       probability: 0.0
 
+notification:
+  slack:
+    webhook-url: ${SLACK_WEBHOOK_URL:}
+
 logging:
   level:
     com.amr.dashboard: DEBUG

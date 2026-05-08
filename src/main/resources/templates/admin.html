@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin — AMR Control Tower</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/css/dashboard.css}">
+    <style>
+        body { overflow: auto; }
+        .main { overflow-y: auto; }
+
+        .content { padding: 1.5rem; display: flex; flex-direction: column; gap: 1.5rem; }
+
+        .section-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+
+        .table-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+
+        .table-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .table-title {
+            font-size: 0.72rem; font-weight: 600;
+            color: var(--text-3); text-transform: uppercase; letter-spacing: 0.06em;
+        }
+
+        table { width: 100%; border-collapse: collapse; }
+        thead th {
+            padding: 0.45rem 1rem; text-align: left;
+            font-size: 0.65rem; font-weight: 600; color: var(--text-3);
+            text-transform: uppercase; letter-spacing: 0.06em;
+            border-bottom: 1px solid var(--border); background: var(--bg);
+        }
+        tbody td { padding: 0.55rem 1rem; font-size: 0.75rem; color: var(--text-2); border-bottom: 1px solid rgba(39,39,42,0.5); }
+        tbody tr:last-child td { border-bottom: none; }
+        tbody tr:hover td { background: rgba(255,255,255,0.02); }
+
+        .td-mono { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; }
+
+        .role-badge {
+            font-size: 0.62rem; font-weight: 600; padding: 0.12rem 0.45rem;
+            border-radius: 100px; text-transform: uppercase; letter-spacing: 0.04em;
+        }
+        .role-admin    { background: rgba(248,113,113,0.1); color: var(--red); }
+        .role-operator { background: rgba(96,165,250,0.1);  color: var(--blue); }
+        .role-viewer   { background: rgba(63,63,70,0.5);    color: var(--text-3); }
+
+        .enabled-badge {
+            font-size: 0.62rem; font-weight: 600; padding: 0.12rem 0.45rem;
+            border-radius: 100px; text-transform: uppercase;
+        }
+        .enabled-true  { background: rgba(74,222,128,0.1);  color: var(--green); }
+        .enabled-false { background: rgba(248,113,113,0.1); color: var(--red); }
+
+        .action-btn {
+            padding: 0.18rem 0.5rem; border-radius: 4px; font-size: 0.65rem;
+            font-weight: 500; border: 1px solid var(--border); background: transparent;
+            color: var(--text-3); cursor: pointer; margin-right: 3px; transition: background 0.1s;
+        }
+        .action-btn:hover { background: var(--surface-2); color: var(--text); }
+        .action-btn.danger { color: var(--red); border-color: rgba(248,113,113,0.2); }
+        .action-btn.danger:hover { background: rgba(248,113,113,0.08); }
+
+        .form-card {
+            background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem;
+        }
+        .form-card-title { font-size: 0.72rem; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.75rem; }
+
+        .form-row { display: flex; gap: 0.5rem; align-items: flex-end; flex-wrap: wrap; }
+        .form-group { display: flex; flex-direction: column; gap: 0.2rem; flex: 1; min-width: 100px; }
+        .form-group label { font-size: 0.68rem; color: var(--text-3); font-weight: 500; }
+        .form-input, .form-select {
+            padding: 0.35rem 0.5rem; background: var(--bg); border: 1px solid var(--border);
+            border-radius: 5px; color: var(--text); font-size: 0.75rem; font-family: inherit; outline: none;
+        }
+        .form-input:focus, .form-select:focus { border-color: var(--border-2); }
+        .form-select option { background: var(--surface); }
+
+        .btn-sm {
+            padding: 0.35rem 0.75rem; background: var(--text); color: var(--bg); border: none;
+            border-radius: 5px; font-size: 0.75rem; font-weight: 600; cursor: pointer; white-space: nowrap;
+        }
+        .btn-sm:hover { background: #e4e4e7; }
+    </style>
+</head>
+<body>
+<div class="layout">
+
+    <!-- Sidebar nav -->
+    <nav class="sidenav">
+        <div class="sidenav-brand">
+            <div class="brand-mark">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="18" height="18">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                          d="M8.25 3v1.5M4.5 8.25H3m18 0h-1.5M4.5 12H3m18 0h-1.5m-15 3.75H3m18 0h-1.5M8.25 19.5V21M12 3v1.5m0 15V21m3.75-18v1.5m0 15V21m-9-1.5h10.5a2.25 2.25 0 0 0 2.25-2.25V6.75a2.25 2.25 0 0 0-2.25-2.25H6.75A2.25 2.25 0 0 0 4.5 6.75v10.5a2.25 2.25 0 0 0 2.25 2.25Zm.75-12h9v9h-9v-9Z"/>
+                </svg>
+            </div>
+            <span class="brand-text">Control Tower</span>
+        </div>
+        <div class="sidenav-links">
+            <a href="/" class="sidenav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z"/></svg><span>Dashboard</span></a>
+            <a href="/fleet" class="sidenav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 0 0-10.026 0 1.106 1.106 0 0 0-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12"/></svg><span>Fleet</span></a>
+            <a href="/tasks" class="sidenav-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z"/></svg><span>Tasks</span></a>
+            <a href="/admin" class="sidenav-link active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg><span>Admin</span></a>
+        </div>
+        <div class="sidenav-footer">
+            <div class="user-info">
+                <div class="user-avatar">A</div>
+                <span class="user-name">admin</span>
+            </div>
+            <a href="/logout" class="logout-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16" height="16"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9"/></svg>
+            </a>
+        </div>
+    </nav>
+
+    <div class="main">
+        <header class="topbar">
+            <div class="topbar-left">
+                <h1 class="page-title">Admin</h1>
+            </div>
+        </header>
+
+        <div class="content">
+
+            <div class="section-grid">
+
+                <!-- Users -->
+                <div style="display:flex;flex-direction:column;gap:0.75rem;">
+                    <div class="form-card">
+                        <div class="form-card-title">Add User</div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Username</label>
+                                <input id="u-username" type="text" class="form-input" placeholder="username">
+                            </div>
+                            <div class="form-group">
+                                <label>Password</label>
+                                <input id="u-password" type="password" class="form-input" placeholder="password">
+                            </div>
+                            <div class="form-group">
+                                <label>Role</label>
+                                <select id="u-role" class="form-select">
+                                    <option th:each="r : ${roles}" th:value="${r}" th:text="${r}">VIEWER</option>
+                                </select>
+                            </div>
+                            <button class="btn-sm" onclick="createUser()">Add</button>
+                        </div>
+                    </div>
+
+                    <div class="table-card">
+                        <div class="table-header">
+                            <span class="table-title">Users</span>
+                        </div>
+                        <table>
+                            <thead>
+                                <tr><th>Username</th><th>Role</th><th>Status</th><th>Actions</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="u : ${users}">
+                                    <td class="td-mono" th:text="${u.username}">admin</td>
+                                    <td>
+                                        <span class="role-badge"
+                                              th:classappend="'role-' + ${u.role.name().toLowerCase()}"
+                                              th:text="${u.role}">ADMIN</span>
+                                    </td>
+                                    <td>
+                                        <span class="enabled-badge"
+                                              th:classappend="'enabled-' + ${u.enabled}"
+                                              th:text="${u.enabled ? 'Active' : 'Disabled'}">Active</span>
+                                    </td>
+                                    <td>
+                                        <button class="action-btn"
+                                                th:onclick="'toggleUser(' + ${u.id} + ')'">Toggle</button>
+                                        <button class="action-btn danger"
+                                                th:onclick="'changeRolePrompt(' + ${u.id} + ')'">Role</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Robots -->
+                <div style="display:flex;flex-direction:column;gap:0.75rem;">
+                    <div class="form-card">
+                        <div class="form-card-title">Register Robot</div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Robot ID</label>
+                                <input id="r-id" type="text" class="form-input" placeholder="robot-02">
+                            </div>
+                            <div class="form-group">
+                                <label>Display Name</label>
+                                <input id="r-name" type="text" class="form-input" placeholder="Robot 02">
+                            </div>
+                            <div class="form-group" style="min-width:180px;">
+                                <label>RosBridge URI</label>
+                                <input id="r-uri" type="text" class="form-input" placeholder="ws://192.168.x.x:9090">
+                            </div>
+                            <button class="btn-sm" onclick="registerRobot()">Add</button>
+                        </div>
+                    </div>
+
+                    <div class="table-card">
+                        <div class="table-header">
+                            <span class="table-title">Robots</span>
+                        </div>
+                        <table>
+                            <thead>
+                                <tr><th>Robot ID</th><th>Display Name</th><th>URI</th><th>Status</th><th>Actions</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="r : ${robots}">
+                                    <td class="td-mono" th:text="${r.robotId}">robot-01</td>
+                                    <td th:text="${r.displayName}">Robot 01</td>
+                                    <td class="td-mono" th:text="${r.rosbridgeUri}">ws://...</td>
+                                    <td>
+                                        <span class="enabled-badge"
+                                              th:classappend="'enabled-' + ${r.enabled}"
+                                              th:text="${r.enabled ? 'Active' : 'Disabled'}">Active</span>
+                                    </td>
+                                    <td>
+                                        <button class="action-btn danger"
+                                                th:onclick="'deregisterRobot(\'' + ${r.robotId} + '\')'">Disable</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function createUser() {
+    fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            username: document.getElementById('u-username').value,
+            password: document.getElementById('u-password').value,
+            role: document.getElementById('u-role').value
+        })
+    }).then(r => { if (r.ok) location.reload(); else r.json().then(e => alert(e.message || 'Error')); });
+}
+
+function toggleUser(id) {
+    fetch(`/api/admin/users/${id}/toggle`, { method: 'PATCH' }).then(r => { if (r.ok) location.reload(); });
+}
+
+function changeRolePrompt(id) {
+    const role = prompt('New role (VIEWER / OPERATOR / ADMIN):');
+    if (!role) return;
+    fetch(`/api/admin/users/${id}/role`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: role.toUpperCase() })
+    }).then(r => { if (r.ok) location.reload(); else alert('Invalid role'); });
+}
+
+function registerRobot() {
+    fetch('/api/admin/robots', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            robotId:      document.getElementById('r-id').value,
+            displayName:  document.getElementById('r-name').value,
+            rosbridgeUri: document.getElementById('r-uri').value,
+            odomTopic:    '/odom',
+            batteryTopic: '/battery_state',
+            mapTopic:     '/map',
+            scanTopic:    '/scan'
+        })
+    }).then(r => { if (r.ok) location.reload(); else r.json().then(e => alert(e.message || 'Error')); });
+}
+
+function deregisterRobot(id) {
+    if (!confirm(`Disable robot ${id}?`)) return;
+    fetch(`/api/admin/robots/${id}`, { method: 'DELETE' }).then(r => { if (r.ok) location.reload(); });
+}
+</script>
+</body>
+</html>
