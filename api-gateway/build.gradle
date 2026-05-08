@@ -29,6 +29,9 @@ dependencies {
     // Eureka Client — 서비스 디스커버리를 통한 lb:// 라우팅
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
 
+    // Circuit Breaker 필터 (gateway routes의 CircuitBreaker filter 사용)
+    implementation 'org.springframework.cloud:spring-cloud-starter-circuitbreaker-reactor-resilience4j'
+
     // Actuator + Prometheus + Zipkin
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'io.micrometer:micrometer-registry-prometheus'
