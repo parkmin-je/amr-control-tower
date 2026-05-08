@@ -261,6 +261,16 @@
                     </div>
                     <button class="cmd-btn cmd-goal" onclick="sendGoal()" data-i18n="ctrl.sendGoal">Send goal</button>
                 </div>
+                <div id="nav-status-bar" style="display:none; margin-top:8px;">
+                    <div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-3); margin-bottom:4px;">
+                        <span data-i18n="ctrl.navRemaining">Remaining</span>
+                        <span id="nav-remaining-text">—</span>
+                    </div>
+                    <div style="background:rgba(255,255,255,0.06); border-radius:4px; height:6px; overflow:hidden;">
+                        <div id="nav-progress-fill" style="height:100%; background:var(--blue); width:0%; transition:width 0.5s;"></div>
+                    </div>
+                    <div id="nav-result-msg" style="margin-top:4px; font-size:11px; text-align:center;"></div>
+                </div>
             </div>
 
             <div class="ctrl-group">
@@ -378,6 +388,7 @@
         eventSub  = stompClient.subscribe(`/topic/robot/${robotId}/event`,  msg => addEventLog(JSON.parse(msg.body)));
         mapSub    = stompClient.subscribe(`/topic/robot/${robotId}/map`,    msg => { mapInfo = JSON.parse(msg.body); loadMapImage(robotId); });
         scanSub   = stompClient.subscribe(`/topic/robot/${robotId}/scan`,   msg => { lastScan = JSON.parse(msg.body); redrawMap(); });
+        stompClient.subscribe(`/topic/robot/${robotId}/nav`, msg => updateNavStatus(JSON.parse(msg.body)));
     }
 
     function selectRobot(robotId) {
@@ -678,11 +689,64 @@
     // ── Commands ──────────────────────────────────────────────────
     function sendEstop() { fetch(`/api/robot/${currentRobotId}/command/estop`, { method: 'POST' }).then(() => updateStateBadge('EMERGENCY_STOP')); }
     function clearEstop() { fetch(`/api/robot/${currentRobotId}/command/estop/clear`, { method: 'POST' }).then(() => updateStateBadge('IDLE')); }
+    let navStartDistance = null;
+
     function sendGoal() {
         const x = parseFloat(document.getElementById('goal-x').value) || 0;
         const y = parseFloat(document.getElementById('goal-y').value) || 0;
         const theta = parseFloat(document.getElementById('goal-theta').value) || 0;
-        fetch(`/api/robot/${currentRobotId}/command/goal`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ x, y, theta }) });
+        navStartDistance = null;
+        document.getElementById('nav-status-bar').style.display = 'block';
+        document.getElementById('nav-remaining-text').textContent = '—';
+        document.getElementById('nav-progress-fill').style.width = '0%';
+        document.getElementById('nav-result-msg').textContent = '';
+        document.getElementById('nav-result-msg').style.color = '';
+        fetch(`/api/robot/${currentRobotId}/command/goal`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ x, y, theta })
+        }).then(r => {
+            if (!r.ok) showToast(t('ctrl.goalFail') || 'Goal 전송 실패', 'error');
+        });
+    }
+
+    function updateNavStatus(data) {
+        const bar = document.getElementById('nav-status-bar');
+        const fill = document.getElementById('nav-progress-fill');
+        const text = document.getElementById('nav-remaining-text');
+        const msg  = document.getElementById('nav-result-msg');
+
+        if (data.remainingDistance !== undefined && data.remainingDistance >= 0) {
+            bar.style.display = 'block';
+            if (navStartDistance === null || data.remainingDistance > navStartDistance)
+                navStartDistance = data.remainingDistance;
+            const pct = navStartDistance > 0
+                ? Math.max(0, Math.min(100, (1 - data.remainingDistance / navStartDistance) * 100))
+                : 100;
+            fill.style.width = pct + '%';
+            text.textContent = data.remainingDistance.toFixed(2) + ' m'
+                + (data.etaSec > 0 ? ' (~' + data.etaSec + 's)' : '');
+        }
+        if (data.result === 'SUCCEEDED') {
+            fill.style.width = '100%';
+            fill.style.background = 'var(--green)';
+            msg.textContent = t('ctrl.navSucceeded') || '도착 완료 ✓';
+            msg.style.color = 'var(--green)';
+            navStartDistance = null;
+            setTimeout(() => { bar.style.display = 'none'; fill.style.background = 'var(--blue)'; }, 3000);
+        } else if (data.result === 'ABORTED') {
+            fill.style.background = 'var(--red)';
+            msg.textContent = t('ctrl.navAborted') || '내비게이션 실패 ✗';
+            msg.style.color = 'var(--red)';
+            navStartDistance = null;
+        }
+    }
+
+    function showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = 'toast toast-' + type;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
     }
 
     // ── Clock ─────────────────────────────────────────────────────

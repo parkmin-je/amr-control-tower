@@ -115,7 +115,14 @@ public class RosBridgeClient {
         }
         // map→odom 좌표 변환을 위해 /tf 구독 (500ms throttle)
         send("{\"op\":\"subscribe\",\"topic\":\"/tf\",\"type\":\"tf2_msgs/TFMessage\",\"throttle_rate\":500}");
-        log.info("[rosbridge][{}] 토픽 구독 완료 (odom={}, battery={}, map={}, scan={}, tf=/tf)", robotId, odomTopic, batteryTopic, mapTopic, scanTopic);
+        // Nav2 내비게이션 피드백 — 남은 거리·ETA (500ms throttle)
+        send("{\"op\":\"subscribe\",\"topic\":\"/navigate_to_pose/_action/feedback\"," +
+                "\"type\":\"nav2_msgs/action/NavigateToPose_FeedbackMessage\",\"throttle_rate\":500}");
+        // Nav2 액션 상태 — SUCCEEDED/ABORTED 감지
+        send("{\"op\":\"subscribe\",\"topic\":\"/navigate_to_pose/_action/status\"," +
+                "\"type\":\"action_msgs/msg/GoalStatusArray\"}");
+        log.info("[rosbridge][{}] 토픽 구독 완료 (odom={}, battery={}, map={}, scan={}, tf=/tf, nav2=on)",
+                robotId, odomTopic, batteryTopic, mapTopic, scanTopic);
     }
 
     private void handleMessage(String raw) {
@@ -134,6 +141,10 @@ public class RosBridgeClient {
                 robotStatusService.onScan(robotId, msg);
             } else if ("/tf".equals(topic)) {
                 robotStatusService.onTf(robotId, msg);
+            } else if ("/navigate_to_pose/_action/feedback".equals(topic)) {
+                robotStatusService.onNavFeedback(robotId, msg);
+            } else if ("/navigate_to_pose/_action/status".equals(topic)) {
+                robotStatusService.onNavStatus(robotId, msg);
             }
         } catch (Exception e) {
             log.debug("[rosbridge][{}] 메시지 파싱 오류: {}", robotId, e.getMessage());

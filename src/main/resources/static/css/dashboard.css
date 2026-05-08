@@ -631,3 +631,15 @@ input[type="range"]::-webkit-slider-thumb {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 100px; }
 ::-webkit-scrollbar-thumb:hover { background: #52525b; }
+
+
+/* ── Toast ────────────────────────────────────────────────────── */
+.toast {
+    position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+    padding: 10px 18px; border-radius: 8px; font-size: 13px;
+    animation: toast-in 0.2s ease;
+    background: var(--panel); border: 1px solid var(--border);
+}
+.toast-error  { border-color: var(--red);   color: var(--red); }
+.toast-success { border-color: var(--green); color: var(--green); }
+@keyframes toast-in { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }

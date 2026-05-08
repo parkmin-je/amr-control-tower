@@ -3,6 +3,8 @@ package com.amr.dashboard.service;
 import com.amr.dashboard.domain.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -118,5 +120,36 @@ public class TaskService {
     public Task findById(Long taskId) {
         return taskRepository.findById(taskId)
                 .orElseThrow(() -> new IllegalArgumentException("태스크를 찾을 수 없음: " + taskId));
+    }
+
+    /**
+     * Nav2 결과 이벤트 수신 — Spring ApplicationEvent 방식 (순환 의존 방지)
+     * @Async: rosbridge 스레드 블로킹 방지
+     */
+    @Async
+    @EventListener
+    @Transactional
+    public void onNavResult(NavResultEvent event) {
+        onNavResult(event.getRobotId(), event.getStatusCode());
+    }
+
+    @Transactional
+    public void onNavResult(String robotId, int statusCode) {
+        taskRepository.findByRobotIdAndStatusOrderByPriorityAscCreatedAtAsc(robotId, TaskStatus.EXECUTING)
+                .stream().findFirst().ifPresent(task -> {
+                    if (statusCode == 4) { // SUCCEEDED
+                        task.complete();
+                        taskRepository.save(task);
+                        robotStatusService.publishEvent(robotId, RobotEvent.EventType.GOAL_REACHED,
+                                "내비게이션 완료: " + task.getTitle());
+                        log.info("[Nav2][{}] 목표 도달 → Task {} COMPLETED", robotId, task.getId());
+                    } else if (statusCode == 6) { // ABORTED
+                        task.fail("Nav2 내비게이션 실패 (ABORTED)");
+                        taskRepository.save(task);
+                        robotStatusService.publishEvent(robotId, RobotEvent.EventType.ERROR,
+                                "내비게이션 실패: " + task.getTitle());
+                        log.warn("[Nav2][{}] 목표 실패(ABORTED) → Task {} FAILED", robotId, task.getId());
+                    }
+                });
     }
 }

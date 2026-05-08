@@ -1,5 +1,6 @@
 package com.amr.dashboard.service;
 
+import com.amr.dashboard.domain.NavResultEvent;
 import com.amr.dashboard.domain.RobotEvent;
 import com.amr.dashboard.domain.RobotEventRepository;
 import com.amr.dashboard.domain.RobotState;
@@ -36,6 +37,7 @@ public class RobotStatusService {
     private final MapService mapService;
     private final RobotMetricsService metricsService;
     private final NotificationService notificationService;
+    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     // 최신 상태를 메모리에 캐싱
     private final Map<String, RobotStatusCache> cache = new ConcurrentHashMap<>();
@@ -215,6 +217,62 @@ public class RobotStatusService {
         }
     }
 
+    /**
+     * Nav2 액션 피드백 수신 (/navigate_to_pose/_action/feedback)
+     * remaining_distance, estimated_time_remaining 추출 → WebSocket 푸시
+     */
+    public void onNavFeedback(String robotId, JsonNode msg) {
+        RobotStatusCache current = cache.computeIfAbsent(robotId, RobotStatusCache::new);
+        current.lastMessageTime = Instant.now();
+
+        JsonNode feedback = msg.path("feedback");
+        double remaining = feedback.path("remaining_distance").asDouble(-1);
+        int recoveries = feedback.path("number_of_recoveries").asInt(0);
+        double etaSec = feedback.path("estimated_time_remaining").path("sec").asDouble(0);
+
+        if (remaining >= 0) {
+            current.navRemainingDistance = remaining;
+            current.navEtaSec = etaSec;
+            messagingTemplate.convertAndSend("/topic/robot/" + robotId + "/nav", Map.of(
+                    "remainingDistance", Math.round(remaining * 100.0) / 100.0,
+                    "etaSec", (int) etaSec,
+                    "recoveries", recoveries
+            ));
+        }
+    }
+
+    /**
+     * Nav2 액션 상태 수신 (/navigate_to_pose/_action/status)
+     * status: 4=SUCCEEDED, 6=ABORTED → TaskService에 결과 전달
+     */
+    public void onNavStatus(String robotId, JsonNode msg) {
+        JsonNode statusList = msg.path("status_list");
+        if (!statusList.isArray() || statusList.isEmpty()) return;
+
+        // 가장 최근 goal의 상태만 처리
+        JsonNode latest = statusList.get(statusList.size() - 1);
+        int status = latest.path("status").asInt(0);
+
+        RobotStatusCache current = cache.computeIfAbsent(robotId, RobotStatusCache::new);
+
+        if (status == 4 && current.navStatus != 4) { // SUCCEEDED (중복 방지)
+            current.navStatus = status;
+            current.navRemainingDistance = 0;
+            messagingTemplate.convertAndSend("/topic/robot/" + robotId + "/nav",
+                    Map.of("result", "SUCCEEDED", "remainingDistance", 0.0));
+            eventPublisher.publishEvent(new NavResultEvent(this, robotId, 4));
+            log.info("[Nav2][{}] 목표 도달 (SUCCEEDED)", robotId);
+        } else if (status == 6 && current.navStatus != 6) { // ABORTED
+            current.navStatus = status;
+            messagingTemplate.convertAndSend("/topic/robot/" + robotId + "/nav",
+                    Map.of("result", "ABORTED", "remainingDistance", -1.0));
+            eventPublisher.publishEvent(new NavResultEvent(this, robotId, 6));
+            log.warn("[Nav2][{}] 내비게이션 실패 (ABORTED)", robotId);
+        } else if (status == 2) { // EXECUTING
+            current.navStatus = status;
+        }
+    }
+
     /** 수동 드라이브 명령 수신 시 호출 — watchdog 타이머 갱신 */
     public void onManualDriveCmd(String robotId) {
         RobotStatusCache c = cache.computeIfAbsent(robotId, RobotStatusCache::new);
@@ -329,6 +387,10 @@ public class RobotStatusService {
         // WASD watchdog
         Instant lastManualCmdTime = null;
         boolean manualDriveActive = false;
+        // Nav2 피드백
+        double navRemainingDistance = -1;
+        double navEtaSec = 0;
+        int navStatus = 0; // 0=없음, 2=실행중, 4=성공, 6=실패
 
         RobotStatusCache(String robotId) {
             this.robotId = robotId;
