@@ -14,6 +14,9 @@ spring:
     hibernate:
       ddl-auto: create-drop
 
+  flyway:
+    enabled: false
+
 # dev 환경에서는 Eureka 서버 없이 실행
 eureka:
   client:

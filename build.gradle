@@ -63,6 +63,12 @@ dependencies {
     runtimeOnly 'com.h2database:h2'
     runtimeOnly 'com.mysql:mysql-connector-j'
 
+    // Flyway — prod 환경 DB 스키마 버전 관리
+    // Why: ddl-auto:update 는 컬럼 삭제를 처리 못하고 운영 중 스키마 드리프트가 발생함.
+    //      Flyway로 V1__init.sql ~ Vn__.sql 순차 적용 → ddl-auto:validate 와 짝을 이룸.
+    implementation 'org.flywaydb:flyway-core'
+    runtimeOnly 'org.flywaydb:flyway-mysql'
+
     // Security
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6'
