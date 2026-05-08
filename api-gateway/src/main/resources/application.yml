@@ -4,6 +4,13 @@ server:
 spring:
   application:
     name: api-gateway
+
+  # Redis — RequestRateLimiter 토큰 버킷 카운터 저장소
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: 6379
+
   cloud:
     gateway:
       # Eureka를 통한 서비스 디스커버리 기반 라우팅
@@ -22,6 +29,15 @@ spring:
               args:
                 name: dashboard-cb
                 fallbackUri: forward:/fallback
+            # Rate Limiter — IP 기반 토큰 버킷 (초당 10 req, 순간 최대 20)
+            # Why: 인증되지 않은 스크래핑/DDoS 시도를 Gateway 레벨에서 차단
+            #      서비스 레이어까지 도달하기 전에 처리 → 내부 서비스 보호
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 10
+                redis-rate-limiter.burstCapacity: 20
+                redis-rate-limiter.requestedTokens: 1
+                key-resolver: "#{@ipKeyResolver}"
 
       # 글로벌 CORS 설정
       globalcors:

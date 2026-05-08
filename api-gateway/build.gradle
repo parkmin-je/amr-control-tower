@@ -38,6 +38,11 @@ dependencies {
     implementation 'io.micrometer:micrometer-tracing-bridge-brave'
     implementation 'io.zipkin.reporter2:zipkin-reporter-brave'
 
+    // Redis — Rate Limiter 카운터 저장소 (WebFlux Reactive 클라이언트)
+    // Why: Gateway 는 WebFlux 기반 → spring-data-redis-reactive 필요
+    //      Lettuce 클라이언트가 논블로킹 I/O 로 동작해 Gateway 성능에 영향 없음
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis-reactive'
+
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
