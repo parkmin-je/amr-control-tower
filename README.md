@@ -1,8 +1,8 @@
 # AMR Control Tower
 
-실시간으로 AMR(Autonomous Mobile Robot)을 모니터링·제어하는 산업급 Fleet 관제 플랫폼입니다.
+AMR(Autonomous Mobile Robot) 실시간 모니터링·제어 Fleet 관제 대시보드입니다.
 ROS2 rosbridge를 통해 로봇 상태를 수집하고, WebSocket(STOMP)으로 대시보드에 실시간 반영합니다.
-Spring Security RBAC 인증, Task 관리, 다국어(EN/KO/JA) 지원을 갖춘 상용 수준의 제어 시스템입니다.
+Spring Security RBAC 인증, Task 관리, 다국어(EN/KO/JA) 지원을 포함합니다.
 
 ---
 
@@ -375,7 +375,7 @@ amr-control-tower/
 - [x] Resilience4j @CircuitBreaker — 명령 API 보호
 - [x] Prometheus 메트릭 + Actuator 엔드포인트
 
-### Phase 3 — 실무급 로보틱스 기능 (완료)
+### Phase 3 — 로보틱스 기능 추가 (완료)
 - [x] LiDAR `/scan` 실시간 시각화 — HSL 거리 색상 포인트 클라우드
 - [x] `/tf` map→odom 변환 구독 — 맵 프레임 정확도 보정
 - [x] 로봇 방향 화살표 — quaternion→yaw, 캔버스 좌표계 회전 보정
@@ -386,7 +386,7 @@ amr-control-tower/
 - [x] 산업급 다크 HUD UI 전면 재설계 — 3컬럼 레이아웃, Inter + JetBrains Mono
 - [x] OccupancyGrid WebSocket 안정화 (throttle 5s, queue_length 1)
 
-### Phase 4 — 상용 보안·운영 기능 (완료)
+### Phase 4 — 보안·운영 기능 추가 (완료)
 - [x] Spring Security 폼 로그인 — CSRF, 세션 관리
 - [x] RBAC 3단계 — VIEWER / OPERATOR / ADMIN
 - [x] 사용자 관리 — Admin 패널 계정 CRUD, 역할·비밀번호·활성화 토글
