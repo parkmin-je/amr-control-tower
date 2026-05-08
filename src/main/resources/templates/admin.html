@@ -224,6 +224,39 @@
                                 <label data-i18n="admin.rosbridgeUri">RosBridge URI</label>
                                 <input id="r-uri" type="text" class="form-input" placeholder="ws://192.168.x.x:9090">
                             </div>
+                        </div>
+                        <details style="margin-top:8px;">
+                            <summary style="font-size:0.68rem; color:var(--text-3); cursor:pointer; user-select:none;" data-i18n="admin.topicSettings">Topic Settings (optional)</summary>
+                            <div class="form-row" style="margin-top:8px;">
+                                <div class="form-group">
+                                    <label>Odom Topic</label>
+                                    <input id="r-odom" type="text" class="form-input" placeholder="/odom" value="/odom">
+                                </div>
+                                <div class="form-group">
+                                    <label>Battery Topic</label>
+                                    <input id="r-battery" type="text" class="form-input" placeholder="/battery_state" value="/battery_state">
+                                </div>
+                                <div class="form-group">
+                                    <label>Map Topic</label>
+                                    <input id="r-map" type="text" class="form-input" placeholder="/map" value="/map">
+                                </div>
+                            </div>
+                            <div class="form-row" style="margin-top:6px;">
+                                <div class="form-group">
+                                    <label>Scan Topic</label>
+                                    <input id="r-scan" type="text" class="form-input" placeholder="/scan" value="/scan">
+                                </div>
+                                <div class="form-group">
+                                    <label>Goal Topic</label>
+                                    <input id="r-goal" type="text" class="form-input" placeholder="/goal_pose" value="/goal_pose">
+                                </div>
+                                <div class="form-group">
+                                    <label>Cmd Vel Topic</label>
+                                    <input id="r-cmdvel" type="text" class="form-input" placeholder="/cmd_vel" value="/cmd_vel">
+                                </div>
+                            </div>
+                        </details>
+                        <div style="margin-top:10px;">
                             <button class="btn-sm" onclick="registerRobot()">Add</button>
                         </div>
                     </div>
@@ -296,17 +329,21 @@ function changeRolePrompt(id) {
 }
 
 function registerRobot() {
+    const v = id => document.getElementById(id).value.trim();
+    if (!v('r-id') || !v('r-uri')) { alert('Robot ID and URI are required'); return; }
     fetch('/api/admin/robots', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            robotId:      document.getElementById('r-id').value,
-            displayName:  document.getElementById('r-name').value,
-            rosbridgeUri: document.getElementById('r-uri').value,
-            odomTopic:    '/odom',
-            batteryTopic: '/battery_state',
-            mapTopic:     '/map',
-            scanTopic:    '/scan'
+            robotId:      v('r-id'),
+            displayName:  v('r-name') || v('r-id'),
+            rosbridgeUri: v('r-uri'),
+            odomTopic:    v('r-odom')    || '/odom',
+            batteryTopic: v('r-battery') || '/battery_state',
+            mapTopic:     v('r-map')     || '/map',
+            scanTopic:    v('r-scan')    || '/scan',
+            goalTopic:    v('r-goal')    || '/goal_pose',
+            cmdVelTopic:  v('r-cmdvel')  || '/cmd_vel'
         })
     }).then(r => { if (r.ok) location.reload(); else r.json().then(e => alert(e.message || 'Error')); });
 }

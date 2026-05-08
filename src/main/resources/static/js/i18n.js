@@ -76,6 +76,7 @@ const TRANSLATIONS = {
     'admin.robotId':       'Robot ID',
     'admin.displayName':   'Display Name',
     'admin.rosbridgeUri':  'RosBridge URI',
+    'admin.topicSettings': 'Topic Settings (optional)',
     'admin.robots':        'ROBOTS',
   },
   ko: {
@@ -154,6 +155,7 @@ const TRANSLATIONS = {
     'admin.robotId':       '로봇 ID',
     'admin.displayName':   '표시명',
     'admin.rosbridgeUri':  'RosBridge URI',
+    'admin.topicSettings': '토픽 설정 (선택)',
     'admin.robots':        '로봇 목록',
   },
   ja: {
@@ -231,6 +233,7 @@ const TRANSLATIONS = {
     'admin.registerRobot': 'ロボット登録',
     'admin.robotId':       'ロボットID',
     'admin.displayName':   '表示名',
+    'admin.topicSettings': 'トピック設定 (任意)',
     'admin.rosbridgeUri':  'RosBridge URI',
     'admin.robots':        'ロボット一覧',
   }

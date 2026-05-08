@@ -3,6 +3,11 @@ package com.amr.dashboard.controller;
 import com.amr.dashboard.domain.RobotEvent;
 import com.amr.dashboard.service.RobotCommandService;
 import com.amr.dashboard.service.RobotStatusService;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -39,7 +44,7 @@ public class CommandController {
     @PreAuthorize("hasAnyRole('OPERATOR','ADMIN')")
     @PostMapping("/{robotId}/command/velocity")
     public ResponseEntity<Void> sendVelocity(@PathVariable String robotId,
-                                              @RequestBody VelocityRequest req) {
+                                              @Valid @RequestBody VelocityRequest req) {
         log.info("[Command][{}] velocity: linear={}, angular={}", robotId, req.linear(), req.angular());
         commandService.sendVelocity(robotId, req.linear(), req.angular());
         return ResponseEntity.ok().build();
@@ -49,11 +54,17 @@ public class CommandController {
     @PreAuthorize("hasAnyRole('OPERATOR','ADMIN')")
     @PostMapping("/{robotId}/command/goal")
     public ResponseEntity<Void> sendGoal(@PathVariable String robotId,
-                                          @RequestBody NavGoalRequest req) {
+                                          @Valid @RequestBody NavGoalRequest req) {
         commandService.sendNavigationGoal(robotId, req.x(), req.y(), req.theta());
         return ResponseEntity.ok().build();
     }
 
-    record VelocityRequest(double linear, double angular) {}
-    record NavGoalRequest(double x, double y, double theta) {}
+    record VelocityRequest(
+            @DecimalMin("-2.0") @DecimalMax("2.0") double linear,
+            @DecimalMin("-3.0") @DecimalMax("3.0") double angular) {}
+
+    record NavGoalRequest(
+            @DecimalMin("-100.0") @DecimalMax("100.0") double x,
+            @DecimalMin("-100.0") @DecimalMax("100.0") double y,
+            double theta) {}
 }
