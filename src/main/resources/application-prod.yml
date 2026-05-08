@@ -1,0 +1,11 @@
+spring:
+  datasource:
+    url: jdbc:mysql://mysql:3306/amrdb?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: ${MYSQL_USER:amr}
+    password: ${MYSQL_PASSWORD:amrpass}
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    database-platform: org.hibernate.dialect.MySQLDialect
