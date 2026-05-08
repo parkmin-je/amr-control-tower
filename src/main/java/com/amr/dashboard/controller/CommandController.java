@@ -4,9 +4,11 @@ import com.amr.dashboard.domain.RobotEvent;
 import com.amr.dashboard.service.RobotCommandService;
 import com.amr.dashboard.service.RobotStatusService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/robot")
 @RequiredArgsConstructor
@@ -34,6 +36,7 @@ public class CommandController {
     @PostMapping("/{robotId}/command/velocity")
     public ResponseEntity<Void> sendVelocity(@PathVariable String robotId,
                                               @RequestBody VelocityRequest req) {
+        log.info("[Command][{}] velocity: linear={}, angular={}", robotId, req.linear(), req.angular());
         commandService.sendVelocity(robotId, req.linear(), req.angular());
         return ResponseEntity.ok().build();
     }

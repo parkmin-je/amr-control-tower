@@ -143,6 +143,10 @@ public class RosBridgeClient {
     private void send(String json) {
         if (wsClient != null && wsClient.isOpen()) {
             wsClient.send(json);
+        } else {
+            log.warn("[rosbridge][{}] 전송 실패 — 연결 없음. wsClient={}, isOpen={}",
+                    robotId, wsClient != null ? "exists" : "null",
+                    wsClient != null && wsClient.isOpen());
         }
     }
 
