@@ -155,25 +155,25 @@
                     </div>
                     <div class="card-telem">
                         <div class="card-row">
-                            <span class="card-key">Pos X</span>
+                            <span class="card-key" data-i18n="label.posX">Pos X</span>
                             <span class="card-val" th:id="'posX-' + ${robot.robotId}">—</span>
                         </div>
                         <div class="card-row">
-                            <span class="card-key">Pos Y</span>
+                            <span class="card-key" data-i18n="label.posY">Pos Y</span>
                             <span class="card-val" th:id="'posY-' + ${robot.robotId}">—</span>
                         </div>
                         <div class="card-row">
-                            <span class="card-key">Linear vel</span>
+                            <span class="card-key" data-i18n="label.linearVel">Linear vel</span>
                             <span class="card-val" th:id="'linVel-' + ${robot.robotId}">—</span>
                         </div>
                         <div class="card-row">
-                            <span class="card-key">Updated</span>
+                            <span class="card-key" data-i18n="fleet.updated">Updated</span>
                             <span class="card-val" th:id="'time-' + ${robot.robotId}">—</span>
                         </div>
                     </div>
                     <div class="card-battery-wrap">
                         <div class="card-battery-label">
-                            <span>Battery</span>
+                            <span data-i18n="label.battery">Battery</span>
                             <span th:id="'bat-pct-' + ${robot.robotId}">—%</span>
                         </div>
                         <div class="card-battery-bar">
@@ -181,8 +181,8 @@
                         </div>
                     </div>
                     <div class="card-actions" sec:authorize="hasAnyRole('OPERATOR','ADMIN')">
-                        <button class="card-estop" th:data-rid="${robot.robotId}" onclick="estop(this.dataset.rid)">E-Stop</button>
-                        <button class="card-resume" th:data-rid="${robot.robotId}" onclick="resume(this.dataset.rid)">Resume</button>
+                        <button class="card-estop" th:data-rid="${robot.robotId}" onclick="estop(this.dataset.rid)" data-i18n="ctrl.estop">E-Stop</button>
+                        <button class="card-resume" th:data-rid="${robot.robotId}" onclick="resume(this.dataset.rid)" data-i18n="ctrl.resume">Resume</button>
                     </div>
                 </div>
             </div>

@@ -245,38 +245,38 @@
 
             <!-- Create Task form (OPERATOR/ADMIN only) -->
             <div class="form-card" sec:authorize="hasAnyRole('OPERATOR','ADMIN')">
-                <div class="form-card-title">New Task</div>
+                <div class="form-card-title" data-i18n="task.newTask">NEW TASK</div>
                 <div class="form-grid">
                     <div class="form-group">
-                        <label>Robot</label>
+                        <label data-i18n="task.robot">Robot</label>
                         <select id="f-robot" class="form-select">
                             <option th:each="r : ${robots}" th:value="${r.robotId}" th:text="${r.displayName ?: r.robotId}">robot-01</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Title</label>
+                        <label data-i18n="task.title">Title</label>
                         <input id="f-title" type="text" class="form-input" placeholder="Go to station A">
                     </div>
                     <div class="form-group">
-                        <label>Type</label>
+                        <label data-i18n="task.type">Type</label>
                         <select id="f-type" class="form-select">
                             <option th:each="t : ${taskTypes}" th:value="${t}" th:text="${t}">NAVIGATE</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>X (m)</label>
+                        <label data-i18n="ctrl.labelX">X (m)</label>
                         <input id="f-x" type="number" step="0.1" value="0" class="form-input">
                     </div>
                     <div class="form-group">
-                        <label>Y (m)</label>
+                        <label data-i18n="ctrl.labelY">Y (m)</label>
                         <input id="f-y" type="number" step="0.1" value="0" class="form-input">
                     </div>
                     <div class="form-group">
-                        <label>Theta (rad)</label>
+                        <label data-i18n="ctrl.labelTheta">Theta (rad)</label>
                         <input id="f-theta" type="number" step="0.1" value="0" class="form-input">
                     </div>
                     <div class="form-group">
-                        <label>Priority (1=high)</label>
+                        <label data-i18n="task.priority">Priority (1=high)</label>
                         <select id="f-priority" class="form-select">
                             <option value="1">1 — High</option>
                             <option value="2">2</option>
@@ -286,32 +286,32 @@
                         </select>
                     </div>
                     <div class="form-group" style="grid-column: span 2">
-                        <label>Description</label>
+                        <label data-i18n="task.description">Description</label>
                         <input id="f-desc" type="text" class="form-input" placeholder="Optional notes">
                     </div>
                 </div>
                 <div class="form-actions">
-                    <button class="btn-primary" onclick="createTask()">Create Task</button>
+                    <button class="btn-primary" onclick="createTask()" data-i18n="task.create">Create Task</button>
                 </div>
             </div>
 
             <!-- Tasks table -->
             <div class="table-card">
                 <div class="table-header">
-                    <span class="table-title">All Tasks</span>
+                    <span class="table-title" data-i18n="task.allTasks">ALL TASKS</span>
                 </div>
                 <table>
                     <thead>
                         <tr>
-                            <th>ID</th>
-                            <th>Robot</th>
-                            <th>Title</th>
-                            <th>Type</th>
-                            <th>Status</th>
-                            <th>Priority</th>
-                            <th>Created by</th>
-                            <th>Created at</th>
-                            <th>Actions</th>
+                            <th data-i18n="task.id">ID</th>
+                            <th data-i18n="task.robot">ROBOT</th>
+                            <th data-i18n="task.title">TITLE</th>
+                            <th data-i18n="task.type">TYPE</th>
+                            <th data-i18n="task.status">STATUS</th>
+                            <th data-i18n="task.priority">PRIORITY</th>
+                            <th data-i18n="task.createdBy">CREATED BY</th>
+                            <th data-i18n="task.createdAt">CREATED AT</th>
+                            <th data-i18n="task.actions">ACTIONS</th>
                         </tr>
                     </thead>
                     <tbody id="task-tbody">

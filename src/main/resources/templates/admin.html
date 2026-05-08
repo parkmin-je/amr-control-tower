@@ -147,18 +147,18 @@
                 <!-- Users -->
                 <div style="display:flex;flex-direction:column;gap:0.75rem;">
                     <div class="form-card">
-                        <div class="form-card-title">Add User</div>
+                        <div class="form-card-title" data-i18n="admin.addUser">ADD USER</div>
                         <div class="form-row">
                             <div class="form-group">
-                                <label>Username</label>
+                                <label data-i18n="admin.username">Username</label>
                                 <input id="u-username" type="text" class="form-input" placeholder="username">
                             </div>
                             <div class="form-group">
-                                <label>Password</label>
+                                <label data-i18n="admin.password">Password</label>
                                 <input id="u-password" type="password" class="form-input" placeholder="password">
                             </div>
                             <div class="form-group">
-                                <label>Role</label>
+                                <label data-i18n="admin.role">Role</label>
                                 <select id="u-role" class="form-select">
                                     <option th:each="r : ${roles}" th:value="${r}" th:text="${r}">VIEWER</option>
                                 </select>
@@ -169,11 +169,16 @@
 
                     <div class="table-card">
                         <div class="table-header">
-                            <span class="table-title">Users</span>
+                            <span class="table-title" data-i18n="admin.users">USERS</span>
                         </div>
                         <table>
                             <thead>
-                                <tr><th>Username</th><th>Role</th><th>Status</th><th>Actions</th></tr>
+                                <tr>
+                                    <th data-i18n="admin.username">USERNAME</th>
+                                    <th data-i18n="admin.role">ROLE</th>
+                                    <th data-i18n="admin.status">STATUS</th>
+                                    <th data-i18n="admin.actions">ACTIONS</th>
+                                </tr>
                             </thead>
                             <tbody>
                                 <tr th:each="u : ${users}">
@@ -205,18 +210,18 @@
                 <!-- Robots -->
                 <div style="display:flex;flex-direction:column;gap:0.75rem;">
                     <div class="form-card">
-                        <div class="form-card-title">Register Robot</div>
+                        <div class="form-card-title" data-i18n="admin.registerRobot">REGISTER ROBOT</div>
                         <div class="form-row">
                             <div class="form-group">
-                                <label>Robot ID</label>
+                                <label data-i18n="admin.robotId">Robot ID</label>
                                 <input id="r-id" type="text" class="form-input" placeholder="robot-02">
                             </div>
                             <div class="form-group">
-                                <label>Display Name</label>
+                                <label data-i18n="admin.displayName">Display Name</label>
                                 <input id="r-name" type="text" class="form-input" placeholder="Robot 02">
                             </div>
                             <div class="form-group" style="min-width:180px;">
-                                <label>RosBridge URI</label>
+                                <label data-i18n="admin.rosbridgeUri">RosBridge URI</label>
                                 <input id="r-uri" type="text" class="form-input" placeholder="ws://192.168.x.x:9090">
                             </div>
                             <button class="btn-sm" onclick="registerRobot()">Add</button>
@@ -225,11 +230,17 @@
 
                     <div class="table-card">
                         <div class="table-header">
-                            <span class="table-title">Robots</span>
+                            <span class="table-title" data-i18n="admin.robots">ROBOTS</span>
                         </div>
                         <table>
                             <thead>
-                                <tr><th>Robot ID</th><th>Display Name</th><th>URI</th><th>Status</th><th>Actions</th></tr>
+                                <tr>
+                                    <th data-i18n="admin.robotId">ROBOT ID</th>
+                                    <th data-i18n="admin.displayName">DISPLAY NAME</th>
+                                    <th>URI</th>
+                                    <th data-i18n="admin.status">STATUS</th>
+                                    <th data-i18n="admin.actions">ACTIONS</th>
+                                </tr>
                             </thead>
                             <tbody>
                                 <tr th:each="r : ${robots}">
