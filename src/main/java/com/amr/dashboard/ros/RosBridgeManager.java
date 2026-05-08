@@ -1,6 +1,7 @@
 package com.amr.dashboard.ros;
 
 import com.amr.dashboard.config.RosBridgeConfig;
+import com.amr.dashboard.domain.RobotRegistration;
 import com.amr.dashboard.service.RobotStatusService;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -50,6 +51,31 @@ public class RosBridgeManager {
             client.publish(topic, type, msgJson);
         } else {
             log.warn("[RosBridgeManager] 알 수 없는 로봇 ID: {}", robotId);
+        }
+    }
+
+    public void connectRobot(RobotRegistration reg) {
+        if (clients.containsKey(reg.getRobotId())) return;
+        log.info("[RosBridgeManager] 동적 로봇 연결: id={}, uri={}", reg.getRobotId(), reg.getRosbridgeUri());
+        RosBridgeClient client = new RosBridgeClient(
+                reg.getRobotId(),
+                reg.getRosbridgeUri(),
+                config.getReconnectDelayMs(),
+                robotStatusService,
+                reg.getOdomTopic(),
+                reg.getBatteryTopic(),
+                reg.getMapTopic(),
+                reg.getScanTopic()
+        );
+        clients.put(reg.getRobotId(), client);
+        client.start();
+    }
+
+    public void disconnectRobot(String robotId) {
+        RosBridgeClient client = clients.remove(robotId);
+        if (client != null) {
+            client.stop();
+            log.info("[RosBridgeManager] 로봇 연결 해제: id={}", robotId);
         }
     }
 

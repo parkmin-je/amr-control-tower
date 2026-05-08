@@ -1,328 +1,359 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="ko">
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AMR Control Tower</title>
+    <title>Dashboard — AMR Control Tower</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" th:href="@{/css/dashboard.css}">
     <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
-<div class="app">
+<div class="layout">
 
-    <!-- ── TOP BAR ────────────────────────────────────────────────── -->
-    <header class="topbar">
-        <div class="topbar-brand">
-            <div class="brand-hex">⬡</div>
-            <div>
-                <div class="brand-name">AMR CONTROL TOWER</div>
-                <div class="brand-sub">FLEET MANAGEMENT SYSTEM v2</div>
+    <!-- ── SIDE NAV ──────────────────────────────────────────────── -->
+    <nav class="sidenav">
+        <div class="sidenav-brand">
+            <div class="brand-mark">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="18" height="18">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                          d="M8.25 3v1.5M4.5 8.25H3m18 0h-1.5M4.5 12H3m18 0h-1.5m-15 3.75H3m18 0h-1.5M8.25 19.5V21M12 3v1.5m0 15V21m3.75-18v1.5m0 15V21m-9-1.5h10.5a2.25 2.25 0 0 0 2.25-2.25V6.75a2.25 2.25 0 0 0-2.25-2.25H6.75A2.25 2.25 0 0 0 4.5 6.75v10.5a2.25 2.25 0 0 0 2.25 2.25Zm.75-12h9v9h-9v-9Z"/>
+                </svg>
             </div>
+            <span class="brand-text">Control Tower</span>
         </div>
 
-        <div class="topbar-center">
-            <div class="sys-pill">
-                <div class="conn-dot disconnected" id="conn-dot"></div>
-                <span class="sys-pill-label">LINK</span>
-                <span id="conn-status" class="sys-pill-val">OFFLINE</span>
-            </div>
-            <div class="sys-pill">
-                <span class="sys-pill-label">UNITS</span>
-                <span class="sys-pill-val" th:text="${robots.size()} + ' ONLINE'">1 ONLINE</span>
-            </div>
-            <div class="sys-pill">
-                <span class="sys-pill-label">SYS</span>
-                <span class="sys-pill-val" style="color:var(--green)">NOMINAL</span>
-            </div>
+        <div class="sidenav-links">
+            <a href="/" class="sidenav-link active">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16" height="16">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                          d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z"/>
+                </svg>
+                <span>Dashboard</span>
+            </a>
+            <a href="/fleet" class="sidenav-link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16" height="16">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                          d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 0 0-10.026 0 1.106 1.106 0 0 0-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12"/>
+                </svg>
+                <span>Fleet</span>
+            </a>
+            <a href="/tasks" class="sidenav-link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16" height="16">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                          d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z"/>
+                </svg>
+                <span>Tasks</span>
+            </a>
+            <a href="/admin" class="sidenav-link" sec:authorize="hasRole('ADMIN')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16" height="16">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                          d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
+                </svg>
+                <span>Admin</span>
+            </a>
         </div>
 
-        <div class="topbar-right">
-            <a href="/fleet" class="fleet-btn">FLEET VIEW</a>
-            <span id="clock" class="topbar-clock"></span>
-        </div>
-    </header>
-
-    <!-- ── WORKSPACE ──────────────────────────────────────────────── -->
-    <div class="workspace">
-
-        <!-- LEFT SIDEBAR -->
-        <aside class="sidebar">
-
-            <!-- Robot Selector -->
-            <div class="panel-section">
-                <div class="section-label">ACTIVE UNIT</div>
-                <nav class="robot-list">
-                    <button th:each="robot, stat : ${robots}"
-                            th:id="'tab-' + ${robot.robotId}"
-                            th:text="${robot.robotId}"
-                            th:classappend="${stat.first} ? ' active' : ''"
-                            class="tab-btn">
-                    </button>
-                </nav>
-            </div>
-
-            <!-- State -->
-            <div class="panel-section">
-                <div class="section-label">
-                    STATE
-                    <span id="state-badge" class="state-badge state-idle">IDLE</span>
+        <div class="sidenav-footer">
+            <div class="user-info">
+                <div class="user-avatar" th:text="${#strings.substring(username, 0, 1).toUpperCase()}">A</div>
+                <div class="user-details">
+                    <span class="user-name" th:text="${username}">admin</span>
                 </div>
             </div>
+            <a href="/logout" class="logout-btn" title="Logout">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16" height="16">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                          d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9"/>
+                </svg>
+            </a>
+        </div>
+    </nav>
 
-            <!-- Telemetry -->
-            <div class="panel-section">
-                <div class="section-label">TELEMETRY</div>
-                <div class="telem-grid">
-                    <div class="telem-row">
-                        <span class="telem-key">ROBOT ID</span>
-                        <span class="telem-val accent" id="val-robot-id">—</span>
-                    </div>
-                    <div class="telem-row">
-                        <span class="telem-key">POS X</span>
-                        <span class="telem-val" id="val-pos-x">—</span>
-                    </div>
-                    <div class="telem-row">
-                        <span class="telem-key">POS Y</span>
-                        <span class="telem-val" id="val-pos-y">—</span>
-                    </div>
-                    <div class="telem-row">
-                        <span class="telem-key">YAW</span>
-                        <span class="telem-val" id="val-yaw">—</span>
-                    </div>
-                    <div class="telem-row">
-                        <span class="telem-key">LIN VEL</span>
-                        <span class="telem-val" id="val-linear">—</span>
-                    </div>
-                    <div class="telem-row">
-                        <span class="telem-key">ANG VEL</span>
-                        <span class="telem-val" id="val-angular">—</span>
-                    </div>
-                    <div class="telem-row">
-                        <span class="telem-key">UPDATED</span>
-                        <span class="telem-val" style="font-size:0.68rem" id="val-last-time">—</span>
-                    </div>
+    <!-- ── MAIN CONTENT ───────────────────────────────────────────── -->
+    <div class="main">
+
+        <!-- Header -->
+        <header class="topbar">
+            <div class="topbar-left">
+                <h1 class="page-title">Dashboard</h1>
+                <div class="breadcrumb">
+                    <span class="bc-item" id="bc-robot" th:text="${robots[0]?.robotId} ?: 'No robots'">robot-01</span>
                 </div>
             </div>
+            <div class="topbar-right">
+                <div class="status-pill" id="conn-pill">
+                    <span class="conn-dot disconnected" id="conn-dot"></span>
+                    <span id="conn-status">Disconnected</span>
+                </div>
+                <div class="sys-pill">
+                    <span class="pill-label">Units</span>
+                    <span class="pill-val" th:text="${robots.size()}">1</span>
+                </div>
+                <span id="clock" class="clock-text"></span>
+            </div>
+        </header>
 
-            <!-- Battery -->
-            <div class="panel-section">
-                <div class="section-label">POWER</div>
-                <div class="battery-display">
-                    <div class="battery-top">
-                        <span class="battery-pct" id="val-battery">—%</span>
-                        <span class="battery-label-sub">CHARGE</span>
+        <!-- Robot tabs -->
+        <div class="robot-tabs">
+            <button th:each="robot, stat : ${robots}"
+                    th:id="'tab-' + ${robot.robotId}"
+                    th:text="${robot.displayName ?: robot.robotId}"
+                    th:classappend="${stat.first} ? ' active' : ''"
+                    class="robot-tab">
+            </button>
+        </div>
+
+        <!-- Workspace -->
+        <div class="workspace">
+
+            <!-- LEFT: Telemetry + Battery -->
+            <div class="panel panel-left">
+
+                <div class="panel-block">
+                    <div class="panel-block-header">
+                        <span class="panel-block-title">State</span>
+                        <span id="state-badge" class="state-badge state-idle">Idle</span>
+                    </div>
+                </div>
+
+                <div class="panel-block">
+                    <div class="panel-block-header">
+                        <span class="panel-block-title">Telemetry</span>
+                        <span class="panel-block-meta" id="val-last-time">—</span>
+                    </div>
+                    <div class="telem-grid">
+                        <div class="telem-row">
+                            <span class="telem-key">Robot ID</span>
+                            <span class="telem-val mono" id="val-robot-id">—</span>
+                        </div>
+                        <div class="telem-row">
+                            <span class="telem-key">Pos X</span>
+                            <span class="telem-val mono" id="val-pos-x">—</span>
+                        </div>
+                        <div class="telem-row">
+                            <span class="telem-key">Pos Y</span>
+                            <span class="telem-val mono" id="val-pos-y">—</span>
+                        </div>
+                        <div class="telem-row">
+                            <span class="telem-key">Yaw</span>
+                            <span class="telem-val mono" id="val-yaw">—</span>
+                        </div>
+                        <div class="telem-row">
+                            <span class="telem-key">Linear vel</span>
+                            <span class="telem-val mono" id="val-linear">—</span>
+                        </div>
+                        <div class="telem-row">
+                            <span class="telem-key">Angular vel</span>
+                            <span class="telem-val mono" id="val-angular">—</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel-block">
+                    <div class="panel-block-header">
+                        <span class="panel-block-title">Battery</span>
+                        <span class="telem-val mono" id="val-battery" style="font-size:0.8rem">—%</span>
                     </div>
                     <div class="battery-bar-bg">
                         <div class="battery-bar-fill" id="battery-fill" style="width:0%"></div>
                     </div>
                 </div>
-            </div>
 
-        </aside>
-
-        <!-- CENTER: Map + Speed Chart -->
-        <div class="center-panel">
-
-            <!-- Map -->
-            <div class="map-panel">
-                <div class="panel-header">
-                    <span class="panel-title">SLAM MAP — REAL-TIME</span>
-                    <div class="map-controls">
-                        <button class="ctrl-btn active" id="btn-scan-toggle" onclick="toggleScan()">LIDAR</button>
-                        <button class="ctrl-btn" onclick="clearPath()">CLEAR PATH</button>
-                        <span class="map-hint">click map → nav2 goal</span>
+                <div class="panel-block">
+                    <div class="panel-block-header">
+                        <span class="panel-block-title">Session</span>
+                    </div>
+                    <div class="stat-row">
+                        <div class="stat-card">
+                            <div class="stat-val mono" id="stat-distance">—</div>
+                            <div class="stat-label">Distance (m)</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-val mono" id="stat-uptime">—</div>
+                            <div class="stat-label">Uptime (s)</div>
+                        </div>
                     </div>
                 </div>
-                <div class="map-wrap">
-                    <div class="map-corner map-corner-tl"></div>
-                    <div class="map-corner map-corner-tr"></div>
-                    <div class="map-corner map-corner-bl"></div>
-                    <div class="map-corner map-corner-br"></div>
-                    <canvas id="map-canvas" width="512" height="512"></canvas>
-                    <canvas id="compass-canvas" width="76" height="76"></canvas>
-                </div>
+
             </div>
 
-            <!-- Speed Chart -->
-            <div class="speed-panel">
-                <div class="panel-header">
-                    <span class="panel-title">LINEAR VELOCITY — m/s</span>
-                </div>
-                <canvas id="speed-chart"></canvas>
-            </div>
+            <!-- CENTER: Map + Speed Chart -->
+            <div class="panel panel-center">
 
-        </div>
-
-        <!-- RIGHT PANEL -->
-        <aside class="right-panel">
-
-            <!-- Session Stats -->
-            <div class="panel-section">
-                <div class="section-label">SESSION STATS</div>
-                <div class="stat-cards">
-                    <div class="stat-card">
-                        <div class="stat-val" id="stat-distance">—</div>
-                        <div class="stat-label">DISTANCE (m)</div>
+                <div class="panel-block map-block">
+                    <div class="panel-block-header">
+                        <span class="panel-block-title">SLAM Map</span>
+                        <div class="map-controls">
+                            <button class="chip-btn active" id="btn-scan-toggle" onclick="toggleScan()">LiDAR</button>
+                            <button class="chip-btn" onclick="clearPath()">Clear path</button>
+                            <span class="map-hint">Click map to send nav goal</span>
+                        </div>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-val" id="stat-uptime">—</div>
-                        <div class="stat-label">UPTIME (s)</div>
+                    <div class="map-wrap">
+                        <canvas id="map-canvas" width="512" height="512"></canvas>
+                        <canvas id="compass-canvas" width="72" height="72"></canvas>
                     </div>
                 </div>
-            </div>
 
-            <!-- Mission History Chart -->
-            <div class="panel-section">
-                <div class="section-label">
-                    MISSION HISTORY
-                    <span class="chart-tabs">
-                        <button class="chart-tab active" onclick="switchChart('weekly', this)">7D</button>
-                        <button class="chart-tab" onclick="switchChart('monthly', this)">30D</button>
-                    </span>
-                </div>
-                <canvas id="history-chart" height="140"></canvas>
-            </div>
-
-        </aside>
-    </div>
-
-    <!-- ── CONTROL BAR ─────────────────────────────────────────────── -->
-    <section class="control-bar">
-
-        <!-- Emergency + Goal -->
-        <div class="ctrl-group" style="flex:1; min-width:280px;">
-            <div class="ctrl-group-label">COMMAND</div>
-            <div class="cmd-row">
-                <button id="btn-estop"       class="cmd-btn cmd-estop" onclick="sendEstop()">■ E-STOP</button>
-                <button id="btn-estop-clear" class="cmd-btn cmd-clear" onclick="clearEstop()">▶ RESUME</button>
-            </div>
-            <div class="goal-form">
-                <div class="goal-field">
-                    <label>X (m)</label>
-                    <input id="goal-x" type="number" step="0.1" value="0" class="goal-input">
-                </div>
-                <div class="goal-field">
-                    <label>Y (m)</label>
-                    <input id="goal-y" type="number" step="0.1" value="0" class="goal-input">
-                </div>
-                <div class="goal-field">
-                    <label>THETA</label>
-                    <input id="goal-theta" type="number" step="0.1" value="0" class="goal-input">
-                </div>
-                <button class="cmd-btn cmd-goal" onclick="sendGoal()" style="align-self:flex-end">SEND GOAL</button>
-            </div>
-        </div>
-
-        <!-- Speed Sliders -->
-        <div class="ctrl-group" style="flex:1; min-width:200px;">
-            <div class="ctrl-group-label">VELOCITY LIMITS</div>
-            <div class="speed-sliders">
-                <div class="slider-row">
-                    <div class="slider-header">
-                        <span class="slider-name">LINEAR</span>
-                        <span class="slider-val"><span id="lbl-linear">0.3</span> m/s</span>
+                <div class="panel-block">
+                    <div class="panel-block-header">
+                        <span class="panel-block-title">Linear Velocity</span>
+                        <span class="panel-block-meta">m/s</span>
                     </div>
-                    <input type="range" id="sl-linear" min="0.1" max="1.0" step="0.1" value="0.3"
-                           oninput="document.getElementById('lbl-linear').textContent=this.value">
+                    <canvas id="speed-chart" height="80"></canvas>
                 </div>
-                <div class="slider-row">
-                    <div class="slider-header">
-                        <span class="slider-name">ANGULAR</span>
-                        <span class="slider-val"><span id="lbl-angular">0.5</span> rad/s</span>
+
+            </div>
+
+            <!-- RIGHT: History Chart -->
+            <div class="panel panel-right">
+
+                <div class="panel-block">
+                    <div class="panel-block-header">
+                        <span class="panel-block-title">Mission History</span>
+                        <div class="chart-tabs">
+                            <button class="chart-tab active" onclick="switchChart('weekly', this)">7D</button>
+                            <button class="chart-tab" onclick="switchChart('monthly', this)">30D</button>
+                        </div>
                     </div>
-                    <input type="range" id="sl-angular" min="0.1" max="1.5" step="0.1" value="0.5"
-                           oninput="document.getElementById('lbl-angular').textContent=this.value">
+                    <canvas id="history-chart" height="160"></canvas>
+                </div>
+
+            </div>
+
+        </div><!-- /.workspace -->
+
+        <!-- Control Bar -->
+        <section class="control-bar" th:if="${isOperator}">
+
+            <div class="ctrl-group">
+                <div class="ctrl-group-label">Command</div>
+                <div class="cmd-row">
+                    <button class="cmd-btn cmd-estop" onclick="sendEstop()">E-Stop</button>
+                    <button class="cmd-btn cmd-clear" onclick="clearEstop()">Resume</button>
+                </div>
+                <div class="goal-form">
+                    <div class="goal-field">
+                        <label>X (m)</label>
+                        <input id="goal-x" type="number" step="0.1" value="0" class="goal-input">
+                    </div>
+                    <div class="goal-field">
+                        <label>Y (m)</label>
+                        <input id="goal-y" type="number" step="0.1" value="0" class="goal-input">
+                    </div>
+                    <div class="goal-field">
+                        <label>Theta</label>
+                        <input id="goal-theta" type="number" step="0.1" value="0" class="goal-input">
+                    </div>
+                    <button class="cmd-btn cmd-goal" onclick="sendGoal()">Send goal</button>
                 </div>
             </div>
-        </div>
 
-        <!-- D-Pad -->
-        <div class="ctrl-group">
-            <div class="ctrl-group-label">MANUAL DRIVE</div>
-            <div class="dpad-area">
-                <div class="kb-hint">WASD / ARROW KEYS / SPACE=STOP</div>
+            <div class="ctrl-group">
+                <div class="ctrl-group-label">Velocity Limits</div>
+                <div class="slider-group">
+                    <div class="slider-row">
+                        <span class="slider-name">Linear</span>
+                        <input type="range" id="sl-linear" min="0.1" max="1.0" step="0.1" value="0.3"
+                               oninput="document.getElementById('lbl-linear').textContent=this.value">
+                        <span class="slider-val mono"><span id="lbl-linear">0.3</span> m/s</span>
+                    </div>
+                    <div class="slider-row">
+                        <span class="slider-name">Angular</span>
+                        <input type="range" id="sl-angular" min="0.1" max="1.5" step="0.1" value="0.5"
+                               oninput="document.getElementById('lbl-angular').textContent=this.value">
+                        <span class="slider-val mono"><span id="lbl-angular">0.5</span> r/s</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ctrl-group">
+                <div class="ctrl-group-label">Manual Drive <span class="kbd-hint">WASD / Arrows / Space=Stop</span></div>
                 <div class="dpad">
                     <div class="dpad-row">
                         <button class="dpad-btn" id="dpad-up"
                                 onmousedown="dpadStart(0,1)" onmouseup="dpadStop()"
-                                ontouchstart="dpadStart(0,1)" ontouchend="dpadStop()">▲</button>
+                                ontouchstart="dpadStart(0,1)" ontouchend="dpadStop()">
+                            <svg viewBox="0 0 16 16" fill="currentColor" width="14" height="14"><path d="M8 3L14 13H2L8 3Z"/></svg>
+                        </button>
                     </div>
                     <div class="dpad-row">
                         <button class="dpad-btn" id="dpad-left"
                                 onmousedown="dpadStart(1,0)" onmouseup="dpadStop()"
-                                ontouchstart="dpadStart(1,0)" ontouchend="dpadStop()">◀</button>
+                                ontouchstart="dpadStart(1,0)" ontouchend="dpadStop()">
+                            <svg viewBox="0 0 16 16" fill="currentColor" width="14" height="14"><path d="M3 8L13 2V14L3 8Z"/></svg>
+                        </button>
                         <button class="dpad-btn dpad-stop" id="dpad-center"
                                 onmousedown="sendVelocityCmd(0,0)">■</button>
                         <button class="dpad-btn" id="dpad-right"
                                 onmousedown="dpadStart(-1,0)" onmouseup="dpadStop()"
-                                ontouchstart="dpadStart(-1,0)" ontouchend="dpadStop()">▶</button>
+                                ontouchstart="dpadStart(-1,0)" ontouchend="dpadStop()">
+                            <svg viewBox="0 0 16 16" fill="currentColor" width="14" height="14"><path d="M13 8L3 14V2L13 8Z"/></svg>
+                        </button>
                     </div>
                     <div class="dpad-row">
                         <button class="dpad-btn" id="dpad-down"
                                 onmousedown="dpadStart(0,-1)" onmouseup="dpadStop()"
-                                ontouchstart="dpadStart(0,-1)" ontouchend="dpadStop()">▼</button>
+                                ontouchstart="dpadStart(0,-1)" ontouchend="dpadStop()">
+                            <svg viewBox="0 0 16 16" fill="currentColor" width="14" height="14"><path d="M8 13L2 3H14L8 13Z"/></svg>
+                        </button>
                     </div>
                 </div>
             </div>
-        </div>
 
-    </section>
+        </section>
 
-    <!-- ── EVENT LOG ────────────────────────────────────────────────── -->
-    <section class="event-bar">
-        <div class="event-bar-header">
-            <span class="event-bar-title">EVENT LOG</span>
-            <span class="event-count" id="event-count">0</span>
-        </div>
-        <ul id="event-list" class="event-list"></ul>
-    </section>
+        <!-- Event Log -->
+        <section class="event-section">
+            <div class="event-header">
+                <span class="event-title">Event Log</span>
+                <span class="event-badge" id="event-count">0</span>
+            </div>
+            <ul id="event-list" class="event-list"></ul>
+        </section>
 
-</div><!-- /.app -->
+    </div><!-- /.main -->
+</div><!-- /.layout -->
 
-<!-- ── JAVASCRIPT (logic unchanged) ────────────────────────────────── -->
 <script th:inline="javascript">
     const ROBOTS = /*[[${robots}]]*/ [];
     let currentRobotId = ROBOTS.length > 0 ? ROBOTS[0].robotId : 'robot-01';
 
-    let statusSub = null;
-    let eventSub  = null;
-    let mapSub    = null;
-    let scanSub   = null;
-
-    let mapImage     = null;
-    let mapInfo      = null;
-    let lastStatus   = null;
-    let lastScan     = null;
-    let navGoalMarker = null;
-    let showScan     = true;
-
-    // ── WebSocket / STOMP ─────────────────────────────────────────
+    let statusSub = null, eventSub = null, mapSub = null, scanSub = null;
+    let mapImage = null, mapInfo = null, lastStatus = null, lastScan = null;
+    let navGoalMarker = null, showScan = true;
     let stompClient = null;
 
+    // ── WebSocket ─────────────────────────────────────────────────
     function connect() {
         const socket = new SockJS('/ws');
         stompClient = Stomp.over(socket);
         stompClient.debug = null;
-
         stompClient.connect({}, () => {
-            const dot = document.getElementById('conn-dot');
-            const txt = document.getElementById('conn-status');
-            dot.className = 'conn-dot connected';
-            txt.textContent = 'ONLINE';
-            txt.style.color = 'var(--green)';
+            setConnState(true);
             subscribeRobot(currentRobotId);
             loadTodayStats();
             loadHistoryChart('weekly');
         }, () => {
-            const dot = document.getElementById('conn-dot');
-            const txt = document.getElementById('conn-status');
-            dot.className = 'conn-dot disconnected';
-            txt.textContent = 'OFFLINE';
-            txt.style.color = 'var(--red)';
+            setConnState(false);
             setTimeout(connect, 3000);
         });
+    }
+
+    function setConnState(online) {
+        const dot = document.getElementById('conn-dot');
+        const txt = document.getElementById('conn-status');
+        const pill = document.getElementById('conn-pill');
+        dot.className = 'conn-dot ' + (online ? 'connected' : 'disconnected');
+        txt.textContent = online ? 'Connected' : 'Disconnected';
+        pill.classList.toggle('pill-online', online);
     }
 
     function subscribeRobot(robotId) {
@@ -332,49 +363,36 @@
         if (scanSub)   scanSub.unsubscribe();
 
         document.getElementById('val-robot-id').textContent = robotId;
+        document.getElementById('bc-robot').textContent = robotId;
         pathPoints.length = 0;
-        mapImage  = null;
-        mapInfo   = null;
-        lastStatus = null;
-        lastScan  = null;
-        navGoalMarker = null;
+        mapImage = null; mapInfo = null; lastStatus = null; lastScan = null; navGoalMarker = null;
 
-        statusSub = stompClient.subscribe(`/topic/robot/${robotId}/status`, (msg) => {
-            updateStatus(JSON.parse(msg.body));
-        });
-        eventSub = stompClient.subscribe(`/topic/robot/${robotId}/event`, (msg) => {
-            addEventLog(JSON.parse(msg.body));
-        });
-        mapSub = stompClient.subscribe(`/topic/robot/${robotId}/map`, (msg) => {
-            mapInfo = JSON.parse(msg.body);
-            loadMapImage(robotId);
-        });
-        scanSub = stompClient.subscribe(`/topic/robot/${robotId}/scan`, (msg) => {
-            lastScan = JSON.parse(msg.body);
-            redrawMap();
-        });
+        statusSub = stompClient.subscribe(`/topic/robot/${robotId}/status`, msg => updateStatus(JSON.parse(msg.body)));
+        eventSub  = stompClient.subscribe(`/topic/robot/${robotId}/event`,  msg => addEventLog(JSON.parse(msg.body)));
+        mapSub    = stompClient.subscribe(`/topic/robot/${robotId}/map`,    msg => { mapInfo = JSON.parse(msg.body); loadMapImage(robotId); });
+        scanSub   = stompClient.subscribe(`/topic/robot/${robotId}/scan`,   msg => { lastScan = JSON.parse(msg.body); redrawMap(); });
     }
 
     function selectRobot(robotId) {
         currentRobotId = robotId;
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.robot-tab').forEach(b => b.classList.remove('active'));
         document.getElementById('tab-' + robotId).classList.add('active');
         subscribeRobot(robotId);
         loadTodayStats();
         loadHistoryChart(currentChartMode);
         document.getElementById('event-list').innerHTML = '';
         document.getElementById('event-count').textContent = '0';
+        eventCount = 0;
     }
 
-    // ── Status Update ─────────────────────────────────────────────
+    // ── Status ────────────────────────────────────────────────────
     function updateStatus(data) {
         lastStatus = data;
         document.getElementById('val-pos-x').textContent   = data.posX.toFixed(4) + ' m';
         document.getElementById('val-pos-y').textContent   = data.posY.toFixed(4) + ' m';
         document.getElementById('val-linear').textContent  = data.linearVel.toFixed(3) + ' m/s';
         document.getElementById('val-angular').textContent = data.angularVel.toFixed(3) + ' r/s';
-        const yawDeg = (data.yaw * 180 / Math.PI).toFixed(1);
-        document.getElementById('val-yaw').textContent = yawDeg + ' °';
+        document.getElementById('val-yaw').textContent     = (data.yaw * 180 / Math.PI).toFixed(1) + '°';
         document.getElementById('val-last-time').textContent = new Date().toLocaleTimeString();
         if (data.robotState) updateStateBadge(data.robotState);
         updateBattery(data.battery);
@@ -385,28 +403,26 @@
 
     function updateStateBadge(state) {
         const badge = document.getElementById('state-badge');
-        badge.textContent = state.replace('_', ' ');
+        const labels = { IDLE: 'Idle', MOVING: 'Moving', EMERGENCY_STOP: 'E-Stop', CHARGING: 'Charging', ERROR: 'Error' };
+        badge.textContent = labels[state] || state;
         badge.className = 'state-badge state-' + state.toLowerCase().replace(/_/g, '-');
     }
 
-    // ── Battery ───────────────────────────────────────────────────
     function updateBattery(pct) {
         const el = document.getElementById('val-battery');
         el.textContent = pct + '%';
-        el.style.color = pct > 50 ? 'var(--green)' : pct > 20 ? 'var(--amber)' : 'var(--red)';
+        el.style.color = pct > 50 ? '#4ade80' : pct > 20 ? '#fbbf24' : '#f87171';
         const fill = document.getElementById('battery-fill');
         fill.style.width = pct + '%';
-        fill.style.backgroundColor = pct > 50 ? 'var(--green)' : pct > 20 ? 'var(--amber)' : 'var(--red)';
+        fill.style.background = pct > 50 ? '#4ade80' : pct > 20 ? '#fbbf24' : '#f87171';
     }
 
-    // ── 2D Map ────────────────────────────────────────────────────
+    // ── Map ───────────────────────────────────────────────────────
     const mapCanvas = document.getElementById('map-canvas');
     const mapCtx    = mapCanvas.getContext('2d');
     mapCtx.imageSmoothingEnabled = false;
-    const MAP_SCALE   = 30;
-    const MAP_CENTER_X = mapCanvas.width / 2;
-    const MAP_CENTER_Y = mapCanvas.height / 2;
-    const pathPoints  = [];
+    const MAP_SCALE = 30, MAP_CX = mapCanvas.width / 2, MAP_CY = mapCanvas.height / 2;
+    const pathPoints = [];
 
     function loadMapImage(robotId) {
         const img = new Image();
@@ -415,299 +431,148 @@
     }
 
     function worldToCanvas(x, y) {
-        if (!mapInfo) {
-            return { px: MAP_CENTER_X + x * MAP_SCALE, py: MAP_CENTER_Y - y * MAP_SCALE };
-        }
+        if (!mapInfo) return { px: MAP_CX + x * MAP_SCALE, py: MAP_CY - y * MAP_SCALE };
         const mapPxX = (x - mapInfo.originX) / mapInfo.resolution;
         const mapPxY = mapInfo.height - (y - mapInfo.originY) / mapInfo.resolution;
-        return {
-            px: (mapPxX / mapInfo.width)  * mapCanvas.width,
-            py: (mapPxY / mapInfo.height) * mapCanvas.height
-        };
+        return { px: (mapPxX / mapInfo.width) * mapCanvas.width, py: (mapPxY / mapInfo.height) * mapCanvas.height };
     }
 
     function canvasToWorld(px, py) {
         if (!mapInfo) return { x: 0, y: 0 };
-        const mapPxX = (px / mapCanvas.width)  * mapInfo.width;
+        const mapPxX = (px / mapCanvas.width) * mapInfo.width;
         const mapPxY = (py / mapCanvas.height) * mapInfo.height;
-        return {
-            x: mapPxX * mapInfo.resolution + mapInfo.originX,
-            y: (mapInfo.height - mapPxY) * mapInfo.resolution + mapInfo.originY
-        };
+        return { x: mapPxX * mapInfo.resolution + mapInfo.originX, y: (mapInfo.height - mapPxY) * mapInfo.resolution + mapInfo.originY };
     }
 
     function redrawMap() {
         mapCtx.clearRect(0, 0, mapCanvas.width, mapCanvas.height);
-
-        // 1. SLAM 맵 배경
         if (mapImage && mapInfo) {
             mapCtx.drawImage(mapImage, 0, 0, mapCanvas.width, mapCanvas.height);
         } else {
-            mapCtx.strokeStyle = '#0e1a2e';
+            mapCtx.strokeStyle = '#27272a';
             mapCtx.lineWidth = 0.5;
-            for (let i = 0; i < mapCanvas.width; i += MAP_SCALE) {
-                mapCtx.beginPath(); mapCtx.moveTo(i, 0); mapCtx.lineTo(i, mapCanvas.height); mapCtx.stroke();
-            }
-            for (let j = 0; j < mapCanvas.height; j += MAP_SCALE) {
-                mapCtx.beginPath(); mapCtx.moveTo(0, j); mapCtx.lineTo(mapCanvas.width, j); mapCtx.stroke();
-            }
+            for (let i = 0; i < mapCanvas.width; i += MAP_SCALE) { mapCtx.beginPath(); mapCtx.moveTo(i, 0); mapCtx.lineTo(i, mapCanvas.height); mapCtx.stroke(); }
+            for (let j = 0; j < mapCanvas.height; j += MAP_SCALE) { mapCtx.beginPath(); mapCtx.moveTo(0, j); mapCtx.lineTo(mapCanvas.width, j); mapCtx.stroke(); }
         }
-
-        // 2. LiDAR 스캔 포인트
         if (showScan && lastScan && lastStatus) {
             const { angleMin, angleIncrement, ranges } = lastScan;
             const { posX, posY, yaw } = lastStatus;
             ranges.forEach((r, i) => {
                 if (r <= 0 || r > 4.0) return;
                 const angle = angleMin + i * angleIncrement + yaw;
-                const wx = posX + r * Math.cos(angle);
-                const wy = posY + r * Math.sin(angle);
-                const { px, py } = worldToCanvas(wx, wy);
-                const norm = Math.min(r / 3.5, 1);
-                const hue  = norm * 110;
-                mapCtx.beginPath();
-                mapCtx.arc(px, py, 2, 0, Math.PI * 2);
-                mapCtx.fillStyle = `hsla(${hue},100%,60%,0.8)`;
-                mapCtx.fill();
+                const { px, py } = worldToCanvas(posX + r * Math.cos(angle), posY + r * Math.sin(angle));
+                const hue = Math.min(r / 3.5, 1) * 110;
+                mapCtx.beginPath(); mapCtx.arc(px, py, 2, 0, Math.PI * 2);
+                mapCtx.fillStyle = `hsla(${hue},90%,60%,0.8)`; mapCtx.fill();
             });
         }
-
-        // 3. 주행 경로
         if (pathPoints.length > 1) {
-            mapCtx.beginPath();
-            mapCtx.strokeStyle = 'rgba(0,212,255,0.5)';
-            mapCtx.lineWidth = 1.5;
+            mapCtx.beginPath(); mapCtx.strokeStyle = 'rgba(99,179,237,0.4)'; mapCtx.lineWidth = 1.5;
             mapCtx.moveTo(pathPoints[0].px, pathPoints[0].py);
-            pathPoints.forEach(p => mapCtx.lineTo(p.px, p.py));
-            mapCtx.stroke();
+            pathPoints.forEach(p => mapCtx.lineTo(p.px, p.py)); mapCtx.stroke();
         }
-
-        // 4. Nav2 목표 마커
         if (navGoalMarker) {
             const { px, py } = worldToCanvas(navGoalMarker.x, navGoalMarker.y);
-            mapCtx.strokeStyle = '#ffab40';
-            mapCtx.lineWidth = 2;
+            mapCtx.strokeStyle = '#f59e0b'; mapCtx.lineWidth = 2;
             mapCtx.beginPath(); mapCtx.moveTo(px-12, py); mapCtx.lineTo(px+12, py); mapCtx.stroke();
             mapCtx.beginPath(); mapCtx.moveTo(px, py-12); mapCtx.lineTo(px, py+12); mapCtx.stroke();
-            mapCtx.beginPath(); mapCtx.arc(px, py, 9, 0, Math.PI * 2);
-            mapCtx.strokeStyle = 'rgba(255,171,64,0.5)'; mapCtx.stroke();
+            mapCtx.beginPath(); mapCtx.arc(px, py, 9, 0, Math.PI * 2); mapCtx.strokeStyle = 'rgba(245,158,11,0.4)'; mapCtx.stroke();
         }
-
-        // 5. 로봇 화살표
         if (pathPoints.length > 0 && lastStatus) {
             const { px, py } = worldToCanvas(lastStatus.posX, lastStatus.posY);
-            const yaw = lastStatus.yaw || 0;
-            mapCtx.save();
-            mapCtx.translate(px, py);
-            mapCtx.rotate(Math.PI / 2 - yaw);
-
-            // 외부 글로우
-            mapCtx.shadowColor = '#00d4ff';
-            mapCtx.shadowBlur  = 10;
-
-            // 화살표 몸통
-            mapCtx.beginPath();
-            mapCtx.moveTo(0, -14);
-            mapCtx.lineTo(-8, 7);
-            mapCtx.lineTo(0, 3);
-            mapCtx.lineTo(8, 7);
-            mapCtx.closePath();
-            mapCtx.fillStyle = '#ff3d57';
-            mapCtx.strokeStyle = '#fff';
-            mapCtx.lineWidth = 1.5;
-            mapCtx.fill();
-            mapCtx.stroke();
-
-            mapCtx.restore();
+            mapCtx.save(); mapCtx.translate(px, py); mapCtx.rotate(Math.PI / 2 - (lastStatus.yaw || 0));
+            mapCtx.shadowColor = '#60a5fa'; mapCtx.shadowBlur = 8;
+            mapCtx.beginPath(); mapCtx.moveTo(0, -13); mapCtx.lineTo(-7, 7); mapCtx.lineTo(0, 3); mapCtx.lineTo(7, 7); mapCtx.closePath();
+            mapCtx.fillStyle = '#ef4444'; mapCtx.strokeStyle = '#fff'; mapCtx.lineWidth = 1.5;
+            mapCtx.fill(); mapCtx.stroke(); mapCtx.restore();
         }
     }
 
     function updateMap(x, y) {
-        const { px, py } = worldToCanvas(x, y);
-        pathPoints.push({ px, py });
+        const pt = worldToCanvas(x, y);
+        pathPoints.push(pt);
         if (pathPoints.length > 800) pathPoints.shift();
         redrawMap();
     }
 
-    function clearPath() {
-        pathPoints.length = 0;
-        navGoalMarker = null;
-        redrawMap();
-    }
-
+    function clearPath() { pathPoints.length = 0; navGoalMarker = null; redrawMap(); }
     function toggleScan() {
         showScan = !showScan;
-        const btn = document.getElementById('btn-scan-toggle');
-        btn.classList.toggle('active', showScan);
+        document.getElementById('btn-scan-toggle').classList.toggle('active', showScan);
         redrawMap();
     }
 
-    // 맵 클릭 → Nav2 목표
     mapCanvas.addEventListener('click', (e) => {
         if (!mapInfo) return;
-        const rect   = mapCanvas.getBoundingClientRect();
-        const scaleX = mapCanvas.width  / rect.width;
-        const scaleY = mapCanvas.height / rect.height;
-        const px = (e.clientX - rect.left) * scaleX;
-        const py = (e.clientY - rect.top)  * scaleY;
+        const rect = mapCanvas.getBoundingClientRect();
+        const px = (e.clientX - rect.left) * mapCanvas.width / rect.width;
+        const py = (e.clientY - rect.top) * mapCanvas.height / rect.height;
         const world = canvasToWorld(px, py);
         navGoalMarker = world;
-        document.getElementById('goal-x').value     = world.x.toFixed(2);
-        document.getElementById('goal-y').value     = world.y.toFixed(2);
+        document.getElementById('goal-x').value = world.x.toFixed(2);
+        document.getElementById('goal-y').value = world.y.toFixed(2);
         document.getElementById('goal-theta').value = '0';
         redrawMap();
         fetch(`/api/robot/${currentRobotId}/command/goal`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ x: world.x, y: world.y, theta: 0 })
         });
     });
 
-    // ── 나침반 ────────────────────────────────────────────────────
+    // ── Compass ───────────────────────────────────────────────────
     const compassCanvas = document.getElementById('compass-canvas');
-    const compassCtx    = compassCanvas.getContext('2d');
+    const compassCtx = compassCanvas.getContext('2d');
 
     function updateCompass(yaw) {
         const cx = compassCanvas.width / 2, cy = compassCanvas.height / 2, r = cx - 4;
         compassCtx.clearRect(0, 0, compassCanvas.width, compassCanvas.height);
-
-        // 배경
-        compassCtx.beginPath();
-        compassCtx.arc(cx, cy, r, 0, Math.PI * 2);
-        compassCtx.fillStyle = 'rgba(6,10,18,0.9)';
-        compassCtx.fill();
-        compassCtx.strokeStyle = '#1a2840';
-        compassCtx.lineWidth = 1;
-        compassCtx.stroke();
-
-        // 눈금 방위
-        const dirs = ['N','E','S','W'];
-        compassCtx.font = 'bold 9px JetBrains Mono, monospace';
-        compassCtx.textAlign = 'center';
-        compassCtx.textBaseline = 'middle';
-        dirs.forEach((d, i) => {
+        compassCtx.beginPath(); compassCtx.arc(cx, cy, r, 0, Math.PI * 2);
+        compassCtx.fillStyle = '#18181b'; compassCtx.fill();
+        compassCtx.strokeStyle = '#3f3f46'; compassCtx.lineWidth = 1; compassCtx.stroke();
+        ['N','E','S','W'].forEach((d, i) => {
             const angle = (i * Math.PI / 2) - yaw;
-            const tx = cx + (r - 10) * Math.sin(angle);
-            const ty = cy - (r - 10) * Math.cos(angle);
-            compassCtx.fillStyle = d === 'N' ? '#ff3d57' : '#617090';
-            compassCtx.fillText(d, tx, ty);
+            const tx = cx + (r - 10) * Math.sin(angle), ty = cy - (r - 10) * Math.cos(angle);
+            compassCtx.font = 'bold 9px Inter, sans-serif'; compassCtx.textAlign = 'center'; compassCtx.textBaseline = 'middle';
+            compassCtx.fillStyle = d === 'N' ? '#ef4444' : '#71717a'; compassCtx.fillText(d, tx, ty);
         });
-
-        // 나침반 바늘 (항상 북쪽 고정)
-        compassCtx.save();
-        compassCtx.translate(cx, cy);
-        compassCtx.rotate(-yaw);
-
-        // 북쪽 (빨강)
-        compassCtx.beginPath();
-        compassCtx.moveTo(0, -(r - 18));
-        compassCtx.lineTo(-4, 0);
-        compassCtx.lineTo(4, 0);
-        compassCtx.closePath();
-        compassCtx.fillStyle = '#ff3d57';
-        compassCtx.fill();
-
-        // 남쪽 (회색)
-        compassCtx.beginPath();
-        compassCtx.moveTo(0, r - 18);
-        compassCtx.lineTo(-4, 0);
-        compassCtx.lineTo(4, 0);
-        compassCtx.closePath();
-        compassCtx.fillStyle = '#2e3f5c';
-        compassCtx.fill();
-
+        compassCtx.save(); compassCtx.translate(cx, cy); compassCtx.rotate(-yaw);
+        compassCtx.beginPath(); compassCtx.moveTo(0, -(r-18)); compassCtx.lineTo(-3, 0); compassCtx.lineTo(3, 0); compassCtx.closePath();
+        compassCtx.fillStyle = '#ef4444'; compassCtx.fill();
+        compassCtx.beginPath(); compassCtx.moveTo(0, r-18); compassCtx.lineTo(-3, 0); compassCtx.lineTo(3, 0); compassCtx.closePath();
+        compassCtx.fillStyle = '#3f3f46'; compassCtx.fill();
         compassCtx.restore();
-
-        // 중심 점
-        compassCtx.beginPath();
-        compassCtx.arc(cx, cy, 3, 0, Math.PI * 2);
-        compassCtx.fillStyle = '#00d4ff';
-        compassCtx.fill();
-
-        // 각도 표시
-        const deg = ((yaw * 180 / Math.PI) % 360 + 360) % 360;
-        compassCtx.fillStyle = '#00d4ff';
-        compassCtx.font = 'bold 8px JetBrains Mono, monospace';
-        compassCtx.textAlign = 'center';
-        compassCtx.textBaseline = 'middle';
-        compassCtx.fillText(Math.round(deg) + '°', cx, cy + 4);
+        compassCtx.beginPath(); compassCtx.arc(cx, cy, 3, 0, Math.PI * 2); compassCtx.fillStyle = '#60a5fa'; compassCtx.fill();
     }
     updateCompass(0);
 
-    // ── 속도 차트 ──────────────────────────────────────────────────
-    const speedLabels = [];
-    const speedData   = [];
-    const speedChart  = new Chart(document.getElementById('speed-chart'), {
+    // ── Speed chart ───────────────────────────────────────────────
+    const speedLabels = [], speedData = [];
+    const speedChart = new Chart(document.getElementById('speed-chart'), {
         type: 'line',
-        data: {
-            labels: speedLabels,
-            datasets: [{
-                label: 'Linear vel (m/s)',
-                data: speedData,
-                borderColor: '#00d4ff',
-                backgroundColor: 'rgba(0,212,255,0.08)',
-                tension: 0.3,
-                pointRadius: 0,
-                fill: true,
-                borderWidth: 1.5
-            }]
-        },
-        options: {
-            animation: false,
-            scales: {
-                x: { display: false },
-                y: {
-                    ticks: { color: '#617090', font: { family: 'JetBrains Mono', size: 10 } },
-                    grid:  { color: '#1a2840' },
-                    min: -0.5, max: 1.0
-                }
-            },
-            plugins: {
-                legend: { display: false }
-            }
-        }
+        data: { labels: speedLabels, datasets: [{ label: 'Linear (m/s)', data: speedData, borderColor: '#60a5fa', backgroundColor: 'rgba(96,165,250,0.06)', tension: 0.3, pointRadius: 0, fill: true, borderWidth: 1.5 }] },
+        options: { animation: false, scales: { x: { display: false }, y: { ticks: { color: '#71717a', font: { family: 'JetBrains Mono', size: 10 } }, grid: { color: '#27272a' }, min: -0.5, max: 1.0 } }, plugins: { legend: { display: false } } }
     });
 
     function updateSpeedChart(vel) {
-        speedLabels.push(new Date().toLocaleTimeString());
-        speedData.push(vel);
+        speedLabels.push(''); speedData.push(vel);
         if (speedLabels.length > 60) { speedLabels.shift(); speedData.shift(); }
         speedChart.update();
     }
 
-    // ── 주간/월간 히스토리 차트 ────────────────────────────────────
-    let currentChartMode = 'weekly';
-    let historyChart = null;
+    // ── History chart ─────────────────────────────────────────────
+    let currentChartMode = 'weekly', historyChart = null;
 
     function loadHistoryChart(mode) {
         currentChartMode = mode;
-        fetch(`/api/robot/${currentRobotId}/stats/${mode}`)
-            .then(r => r.json())
-            .then(d => renderHistoryChart(d.labels, d.distances, mode));
+        fetch(`/api/robot/${currentRobotId}/stats/${mode}`).then(r => r.json()).then(d => renderHistoryChart(d.labels, d.distances));
     }
 
-    function renderHistoryChart(labels, distances, mode) {
+    function renderHistoryChart(labels, distances) {
         if (historyChart) historyChart.destroy();
         historyChart = new Chart(document.getElementById('history-chart'), {
             type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Distance (m)',
-                    data: distances,
-                    backgroundColor: 'rgba(0,212,255,0.25)',
-                    borderColor: '#00d4ff',
-                    borderWidth: 1,
-                    borderRadius: 3
-                }]
-            },
-            options: {
-                scales: {
-                    x: { ticks: { color: '#617090', font: { size: 9 } }, grid: { color: '#1a2840' } },
-                    y: { ticks: { color: '#617090', font: { size: 9 } }, grid: { color: '#1a2840' }, beginAtZero: true }
-                },
-                plugins: { legend: { display: false } }
-            }
+            data: { labels, datasets: [{ label: 'Distance (m)', data: distances, backgroundColor: 'rgba(96,165,250,0.2)', borderColor: '#60a5fa', borderWidth: 1, borderRadius: 3 }] },
+            options: { scales: { x: { ticks: { color: '#71717a', font: { size: 9 } }, grid: { color: '#27272a' } }, y: { ticks: { color: '#71717a', font: { size: 9 } }, grid: { color: '#27272a' }, beginAtZero: true } }, plugins: { legend: { display: false } } }
         });
     }
 
@@ -717,29 +582,25 @@
         loadHistoryChart(mode);
     }
 
-    // ── 오늘 통계 ──────────────────────────────────────────────────
+    // ── Today stats ───────────────────────────────────────────────
     function loadTodayStats() {
-        fetch(`/api/robot/${currentRobotId}/stats/today`)
-            .then(r => r.json())
-            .then(d => {
-                document.getElementById('stat-distance').textContent = d.totalDistanceM;
-                document.getElementById('stat-uptime').textContent   = d.activeSeconds;
-            });
+        fetch(`/api/robot/${currentRobotId}/stats/today`).then(r => r.json()).then(d => {
+            document.getElementById('stat-distance').textContent = d.totalDistanceM;
+            document.getElementById('stat-uptime').textContent   = d.activeSeconds;
+        });
     }
     setInterval(loadTodayStats, 10000);
 
-    // ── 이벤트 로그 ────────────────────────────────────────────────
+    // ── Event log ─────────────────────────────────────────────────
     let eventCount = 0;
-
     function addEventLog(event) {
         eventCount++;
         document.getElementById('event-count').textContent = eventCount;
         const list = document.getElementById('event-list');
         const li = document.createElement('li');
         li.className = 'event-item event-' + event.eventType.toLowerCase();
-        li.dataset.eventId = event.id || '';
-        li.innerHTML = `<span>[${new Date().toLocaleTimeString()}] <b>${event.eventType}</b> — ${event.message}</span>` +
-            (event.id ? `<button class="ack-btn" onclick="ackEvent('${event.id}', this)">ACK</button>` : '');
+        li.innerHTML = `<span class="event-time">${new Date().toLocaleTimeString()}</span><span class="event-type">${event.eventType}</span><span class="event-msg">${event.message}</span>` +
+            (event.id ? `<button class="ack-btn" onclick="ackEvent('${event.id}',this)">Ack</button>` : '');
         list.prepend(li);
         if (list.children.length > 20) list.removeChild(list.lastChild);
     }
@@ -749,14 +610,13 @@
             .then(r => { if (r.ok) { btn.textContent = '✓'; btn.disabled = true; btn.closest('li').classList.add('event-acked'); } });
     }
 
-    // ── 속도 제어 (D-패드 + 키보드) ────────────────────────────────
+    // ── Velocity control ──────────────────────────────────────────
     const keysDown = new Set();
     let velLoop = null;
 
     function sendVelocityCmd(linear, angular) {
         fetch(`/api/robot/${currentRobotId}/command/velocity`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ linear, angular })
         });
     }
@@ -773,70 +633,48 @@
     }
 
     function dpadStart(angDir, linDir) {
-        const linSpd = parseFloat(document.getElementById('sl-linear').value);
-        const angSpd = parseFloat(document.getElementById('sl-angular').value);
-        const lin = linDir * linSpd;
-        const ang = angDir * angSpd;
+        const lin = linDir * parseFloat(document.getElementById('sl-linear').value);
+        const ang = angDir * parseFloat(document.getElementById('sl-angular').value);
         sendVelocityCmd(lin, ang);
         clearInterval(velLoop);
         velLoop = setInterval(() => sendVelocityCmd(lin, ang), 100);
     }
 
-    function dpadStop() {
-        clearInterval(velLoop);
-        velLoop = null;
-        sendVelocityCmd(0, 0);
-    }
+    function dpadStop() { clearInterval(velLoop); velLoop = null; sendVelocityCmd(0, 0); }
 
     const CTRL_KEYS = ['w','s','a','d','ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '];
-    const KEY_DPAD  = { w:'dpad-up', s:'dpad-down', a:'dpad-left', d:'dpad-right',
-                        ArrowUp:'dpad-up', ArrowDown:'dpad-down', ArrowLeft:'dpad-left', ArrowRight:'dpad-right' };
+    const KEY_DPAD  = { w:'dpad-up', s:'dpad-down', a:'dpad-left', d:'dpad-right', ArrowUp:'dpad-up', ArrowDown:'dpad-down', ArrowLeft:'dpad-left', ArrowRight:'dpad-right' };
 
-    document.addEventListener('keydown', (e) => {
-        if (!CTRL_KEYS.includes(e.key)) return;
-        e.preventDefault();
+    document.addEventListener('keydown', e => {
+        if (!CTRL_KEYS.includes(e.key)) return; e.preventDefault();
         if (e.key === ' ') { dpadStop(); return; }
         if (keysDown.has(e.key)) return;
         keysDown.add(e.key);
         if (KEY_DPAD[e.key]) document.getElementById(KEY_DPAD[e.key])?.classList.add('dpad-active');
         if (!velLoop) velLoop = setInterval(computeVelocity, 100);
     });
-
-    document.addEventListener('keyup', (e) => {
+    document.addEventListener('keyup', e => {
         keysDown.delete(e.key);
         if (KEY_DPAD[e.key]) document.getElementById(KEY_DPAD[e.key])?.classList.remove('dpad-active');
         if (keysDown.size === 0) dpadStop();
     });
 
-    // ── 로봇 명령 ──────────────────────────────────────────────────
-    function sendEstop() {
-        fetch(`/api/robot/${currentRobotId}/command/estop`, { method: 'POST' })
-            .then(() => updateStateBadge('EMERGENCY_STOP'));
-    }
-
-    function clearEstop() {
-        fetch(`/api/robot/${currentRobotId}/command/estop/clear`, { method: 'POST' })
-            .then(() => updateStateBadge('IDLE'));
-    }
-
+    // ── Commands ──────────────────────────────────────────────────
+    function sendEstop() { fetch(`/api/robot/${currentRobotId}/command/estop`, { method: 'POST' }).then(() => updateStateBadge('EMERGENCY_STOP')); }
+    function clearEstop() { fetch(`/api/robot/${currentRobotId}/command/estop/clear`, { method: 'POST' }).then(() => updateStateBadge('IDLE')); }
     function sendGoal() {
-        const x     = parseFloat(document.getElementById('goal-x').value) || 0;
-        const y     = parseFloat(document.getElementById('goal-y').value) || 0;
+        const x = parseFloat(document.getElementById('goal-x').value) || 0;
+        const y = parseFloat(document.getElementById('goal-y').value) || 0;
         const theta = parseFloat(document.getElementById('goal-theta').value) || 0;
-        fetch(`/api/robot/${currentRobotId}/command/goal`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ x, y, theta })
-        });
+        fetch(`/api/robot/${currentRobotId}/command/goal`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ x, y, theta }) });
     }
 
-    // ── 시계 ───────────────────────────────────────────────────────
-    setInterval(() => {
-        document.getElementById('clock').textContent = new Date().toLocaleString('ko-KR');
-    }, 1000);
-    document.getElementById('clock').textContent = new Date().toLocaleString('ko-KR');
+    // ── Clock ─────────────────────────────────────────────────────
+    function updateClock() { document.getElementById('clock').textContent = new Date().toLocaleString('ko-KR'); }
+    setInterval(updateClock, 1000); updateClock();
 
-    document.querySelectorAll('.tab-btn').forEach(btn => {
+    // ── Init ──────────────────────────────────────────────────────
+    document.querySelectorAll('.robot-tab').forEach(btn => {
         btn.addEventListener('click', () => selectRobot(btn.id.replace('tab-', '')));
     });
 

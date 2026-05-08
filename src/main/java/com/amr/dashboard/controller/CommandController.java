@@ -6,6 +6,7 @@ import com.amr.dashboard.service.RobotStatusService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @Slf4j
@@ -18,6 +19,7 @@ public class CommandController {
     private final RobotStatusService robotStatusService;
 
     /** 긴급 정지 */
+    @PreAuthorize("hasAnyRole('OPERATOR','ADMIN')")
     @PostMapping("/{robotId}/command/estop")
     public ResponseEntity<Void> emergencyStop(@PathVariable String robotId) {
         commandService.sendEmergencyStop(robotId);
@@ -26,6 +28,7 @@ public class CommandController {
     }
 
     /** 긴급 정지 해제 */
+    @PreAuthorize("hasAnyRole('OPERATOR','ADMIN')")
     @PostMapping("/{robotId}/command/estop/clear")
     public ResponseEntity<Void> clearEmergencyStop(@PathVariable String robotId) {
         commandService.clearEmergencyStop(robotId);
@@ -33,6 +36,7 @@ public class CommandController {
     }
 
     /** 속도 직접 제어 (/cmd_vel) */
+    @PreAuthorize("hasAnyRole('OPERATOR','ADMIN')")
     @PostMapping("/{robotId}/command/velocity")
     public ResponseEntity<Void> sendVelocity(@PathVariable String robotId,
                                               @RequestBody VelocityRequest req) {
@@ -42,6 +46,7 @@ public class CommandController {
     }
 
     /** 내비게이션 목표 전송 */
+    @PreAuthorize("hasAnyRole('OPERATOR','ADMIN')")
     @PostMapping("/{robotId}/command/goal")
     public ResponseEntity<Void> sendGoal(@PathVariable String robotId,
                                           @RequestBody NavGoalRequest req) {
