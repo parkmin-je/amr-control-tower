@@ -178,8 +178,15 @@ public class RobotStatusService {
         if (producer.isPresent()) {
             producer.get().sendEvent(dto);
         } else {
-            saveEventDirect(robotId, type, message);
-            messagingTemplate.convertAndSend("/topic/robot/" + robotId + "/event", dto);
+            RobotEvent saved = saveEventDirect(robotId, type, message);
+            RobotEventDto dtoWithId = RobotEventDto.builder()
+                    .id(saved.getId())
+                    .robotId(dto.getRobotId())
+                    .timestamp(dto.getTimestamp())
+                    .eventType(dto.getEventType())
+                    .message(dto.getMessage())
+                    .build();
+            messagingTemplate.convertAndSend("/topic/robot/" + robotId + "/event", dtoWithId);
         }
     }
 
@@ -200,14 +207,15 @@ public class RobotStatusService {
     }
 
     @Transactional
-    public void saveEventDirect(String robotId, RobotEvent.EventType type, String message) {
-        eventRepository.save(RobotEvent.builder()
+    public RobotEvent saveEventDirect(String robotId, RobotEvent.EventType type, String message) {
+        RobotEvent event = eventRepository.save(RobotEvent.builder()
                 .robotId(robotId)
                 .occurredAt(LocalDateTime.now())
                 .eventType(type)
                 .message(message)
                 .build());
         log.info("[Event] robotId={}, type={}, message={}", robotId, type, message);
+        return event;
     }
 
     public RobotStatusDto getCurrentStatus(String robotId) {

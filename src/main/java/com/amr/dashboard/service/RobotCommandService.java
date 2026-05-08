@@ -63,7 +63,6 @@ public class RobotCommandService {
                 x, y, sinH, cosH);
         rosBridgeManager.publishToRobot(robotId, "/move_base_simple/goal",
                 "geometry_msgs/PoseStamped", poseStamped);
-        robotStatusService.clearEmergencyStop(robotId);
         metricsService.recordCommand(robotId, "NAV_GOAL");
         log.info("[Command][{}] 내비게이션 목표 전송: x={}, y={}, theta={}", robotId, x, y, theta);
     }

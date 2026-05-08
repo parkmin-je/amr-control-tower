@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class RobotEventDto {
+    private Long id;
     private String robotId;
     private String timestamp;
     private String eventType;

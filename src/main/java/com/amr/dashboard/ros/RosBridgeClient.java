@@ -26,7 +26,7 @@ public class RosBridgeClient {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private WebSocketClient wsClient;
-    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+    private final ScheduledExecutorService scheduler;
 
     public RosBridgeClient(String robotId, String uri, long reconnectDelayMs,
                            RobotStatusService robotStatusService,
@@ -39,6 +39,11 @@ public class RosBridgeClient {
         this.batteryTopic = batteryTopic;
         this.mapTopic = mapTopic;
         this.scanTopic = scanTopic;
+        this.scheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "rosbridge-reconnect-" + robotId);
+            t.setDaemon(true);
+            return t;
+        });
     }
 
     public String getRobotId() {

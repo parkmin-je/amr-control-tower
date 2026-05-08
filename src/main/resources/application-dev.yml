@@ -1,22 +1,20 @@
 spring:
   autoconfigure:
     exclude: org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration
-
-# dev 환경에서는 Eureka 서버 없이 실행
-eureka:
-  client:
-    enabled: false
   datasource:
     url: jdbc:h2:mem:amrdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
     driver-class-name: org.h2.Driver
     username: sa
     password:
-
   h2:
     console:
       enabled: true
       path: /h2-console
-
   jpa:
     hibernate:
       ddl-auto: create-drop
+
+# dev 환경에서는 Eureka 서버 없이 실행
+eureka:
+  client:
+    enabled: false
