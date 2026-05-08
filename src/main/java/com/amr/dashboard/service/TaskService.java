@@ -55,7 +55,7 @@ public class TaskService {
             );
         }
 
-        robotStatusService.publishEvent(task.getRobotId(), RobotEvent.EventType.INFO,
+        robotStatusService.publishEvent(task.getRobotId(), RobotEvent.EventType.STARTED,
                 "태스크 시작: " + task.getTitle());
         log.info("[TaskService] 태스크 실행: id={}, robot={}", taskId, task.getRobotId());
         return task;
@@ -66,7 +66,7 @@ public class TaskService {
         Task task = findById(taskId);
         task.complete();
         taskRepository.save(task);
-        robotStatusService.publishEvent(task.getRobotId(), RobotEvent.EventType.INFO,
+        robotStatusService.publishEvent(task.getRobotId(), RobotEvent.EventType.GOAL_REACHED,
                 "태스크 완료: " + task.getTitle());
         return task;
     }
@@ -86,7 +86,7 @@ public class TaskService {
         Task task = findById(taskId);
         task.cancel();
         taskRepository.save(task);
-        robotStatusService.publishEvent(task.getRobotId(), RobotEvent.EventType.INFO,
+        robotStatusService.publishEvent(task.getRobotId(), RobotEvent.EventType.STOPPED,
                 "태스크 취소: " + task.getTitle());
         return task;
     }

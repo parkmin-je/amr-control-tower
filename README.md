@@ -2,14 +2,36 @@
 
 실시간으로 AMR(Autonomous Mobile Robot)을 모니터링·제어하는 산업급 Fleet 관제 플랫폼입니다.
 ROS2 rosbridge를 통해 로봇 상태를 수집하고, WebSocket(STOMP)으로 대시보드에 실시간 반영합니다.
+Spring Security RBAC 인증, Task 관리, 다국어(EN/KO/JA) 지원을 갖춘 상용 수준의 제어 시스템입니다.
 
 ---
 
-## 대시보드 미리보기
+## 화면 미리보기
 
-> SLAM 맵 실시간 오버레이 + LiDAR 스캔 + 로봇 위치 추적 + Gazebo 시뮬레이션 동시 실행
+### 대시보드 (영어)
+> SLAM 맵 실시간 오버레이 + LiDAR 스캔 + 로봇 위치 추적 + 언어 선택(EN/KO/JA)
 
-![AMR Control Tower Dashboard](docs/dashboard-preview.png)
+![Dashboard EN](docs/dashboard-en.png)
+
+### 대시보드 (한국어)
+> 언어 선택기로 전체 UI를 한국어로 전환 — 모든 레이블·버튼·상태 텍스트 실시간 교체
+
+![Dashboard KO](docs/dashboard-ko.png)
+
+### Fleet Overview
+> 전체 로봇 카드 그리드 — 개별 상태·위치·배터리 실시간 표시
+
+![Fleet Overview](docs/fleet.png)
+
+### Task Management
+> 네비게이션 태스크 생성·조회·실행 — 우선순위·타입·좌표 설정
+
+![Task Management](docs/tasks.png)
+
+### Admin Panel
+> 사용자(ADMIN/OPERATOR/VIEWER) 및 로봇 등록 관리 — ADMIN 전용
+
+![Admin Panel](docs/admin.png)
 
 ---
 
@@ -34,13 +56,31 @@ ROS2 rosbridge를 통해 로봇 상태를 수집하고, WebSocket(STOMP)으로 �
 - **Resilience4j Circuit Breaker** — 명령 API 장애 격리
 
 ### Fleet 관리
-- **Fleet 전체 뷰** (`/fleet`) — 전체 로봇 카드 그리드 + 개별 E-Stop
+- **Fleet 전체 뷰** (`/fleet`) — 전체 로봇 카드 그리드 + 개별 실시간 상태
 - **로봇 상태머신** — IDLE / MOVING / EMERGENCY_STOP / CHARGING / ERROR
 - **이벤트 로그** — 배터리 저하, 장애물 감지, YOLO 감지, 목표 도달 실시간 이벤트
 - **이벤트 ACK** — 확인 처리 (ackStatus, ackedAt)
 - **주간/월간 주행 통계** — 일별 주행 거리 바 차트
 
-### 인프라
+### 보안 & 인증 (Phase 4)
+- **Spring Security 폼 로그인** — CSRF 보호, 세션 관리
+- **RBAC 3단계** — VIEWER(조회) / OPERATOR(제어+태스크) / ADMIN(전체)
+- **`@PreAuthorize`** — E-Stop·명령·태스크 API 역할별 접근 제어
+- **사용자 관리** — Admin 패널에서 계정 생성·역할 변경·활성화 토글
+
+### Task 관리 (Phase 4)
+- **태스크 생성** — Robot·Title·Type(NAVIGATE/CHARGE/CUSTOM)·좌표·우선순위 설정
+- **상태머신** — QUEUED → EXECUTING → COMPLETED / FAILED / CANCELLED / PAUSED
+- **ROS2 연동** — NAVIGATE 태스크 실행 시 rosbridge로 Nav2 목표 자동 발행
+- **우선순위 큐** — Priority 1~5, 낮은 번호가 높은 우선순위
+
+### 다국어 지원 (Phase 4)
+- **EN / KO / JA** — 상단 언어 선택기로 전체 UI 언어 실시간 전환
+- **localStorage 영구 저장** — 새로고침 후에도 선택 언어 유지
+- **data-i18n 속성** — 모든 레이블·버튼·상태 텍스트에 i18n 키 적용
+
+### 알림 & 인프라
+- **Slack Webhook 알림** — 배터리 저하(≤20%), 오류, 긴급 정지 시 자동 발송
 - **MSA 구조** — Eureka 서비스 디스커버리 + Spring Cloud Gateway
 - **Kafka 파이프라인** — 운영 환경 상태·이벤트 스트리밍
 - **Prometheus 메트릭** — 배터리·이벤트 커스텀 메트릭 수집
@@ -53,13 +93,15 @@ ROS2 rosbridge를 통해 로봇 상태를 수집하고, WebSocket(STOMP)으로 �
 | 영역 | 기술 |
 |------|------|
 | Backend | Java 21, Spring Boot 3.2.4, Spring WebSocket (STOMP), Spring Data JPA |
-| Frontend | Thymeleaf, Chart.js 4.4, SockJS, STOMP.js, Inter + JetBrains Mono |
+| Security | Spring Security 6, thymeleaf-extras-springsecurity6, RBAC (VIEWER/OPERATOR/ADMIN) |
+| Frontend | Thymeleaf, Chart.js 4.4, SockJS, STOMP.js, Inter + JetBrains Mono, i18n (EN/KO/JA) |
 | Database | H2 (dev), MySQL 8.0 (prod) |
 | Message Broker | Apache Kafka 7.6 (Confluent) |
 | MSA | Spring Cloud Eureka, Spring Cloud Gateway, Resilience4j |
 | ROS2 | ROS2 Humble, rosbridge_suite, slam_toolbox, Nav2, TurtleBot3 Gazebo |
-| Observability | Prometheus, Micrometer, Spring Actuator |
+| Observability | Prometheus, Micrometer, Spring Actuator, Slack Webhook 알림 |
 | DevOps | Docker, Docker Compose, Gradle 8.8 멀티모듈 |
+| API Docs | SpringDoc OpenAPI 3 (Swagger UI `/swagger-ui.html`) |
 
 ---
 
@@ -140,9 +182,21 @@ docker compose up --build
 
 ---
 
+## 기본 계정
+
+| 계정 | 비밀번호 | 역할 | 권한 |
+|------|----------|------|------|
+| admin | admin | ADMIN | 전체 기능 + 사용자·로봇 관리 |
+| operator | operator | OPERATOR | 제어·태스크 생성·실행 |
+| viewer | viewer | VIEWER | 조회 전용 |
+
+> Admin 패널(`/admin`)에서 계정 추가·역할 변경·비밀번호 변경 가능
+
+---
+
 ## 로봇 설정
 
-`application.yml`의 `rosbridge.robots` 리스트에 로봇을 추가합니다:
+`application.yml`의 `rosbridge.robots` 리스트에 로봇을 추가하거나, Admin 패널 **Register Robot** 폼에서 동적으로 등록합니다:
 
 ```yaml
 rosbridge:
@@ -156,33 +210,65 @@ rosbridge:
       scan-topic: /scan
 ```
 
+### Slack 알림 설정 (선택)
+
+```bash
+# 환경변수로 Slack Webhook URL 설정
+export SLACK_WEBHOOK_URL=https://hooks.slack.com/services/XXX/YYY/ZZZ
+```
+
 ---
 
 ## API 명세
 
+> Swagger UI: `http://localhost:8080/swagger-ui.html`
+
 ### 조회
 
-| Method | Endpoint | 설명 |
-|--------|----------|------|
-| GET | `/api/robot/list` | 등록된 로봇 ID 목록 |
-| GET | `/api/robot/{id}/status/live` | 실시간 인메모리 상태 (robotState 포함) |
-| GET | `/api/robot/{id}/stats/today` | 오늘 주행 거리 · 가동 시간 |
-| GET | `/api/robot/{id}/stats/weekly` | 최근 7일 일별 주행 거리 |
-| GET | `/api/robot/{id}/stats/monthly` | 최근 30일 일별 주행 거리 |
-| GET | `/api/robot/{id}/events` | 최근 이벤트 20건 |
-| GET | `/api/robot/{id}/map` | 최신 SLAM 맵 (PNG) |
-| GET | `/api/robot/{id}/map/info` | 맵 메타데이터 (width, height, resolution, origin) |
+| Method | Endpoint | 권한 | 설명 |
+|--------|----------|------|------|
+| GET | `/api/robot/list` | VIEWER+ | 등록된 로봇 ID 목록 |
+| GET | `/api/robot/{id}/status/live` | VIEWER+ | 실시간 인메모리 상태 |
+| GET | `/api/robot/{id}/stats/today` | VIEWER+ | 오늘 주행 거리·가동 시간 |
+| GET | `/api/robot/{id}/stats/weekly` | VIEWER+ | 최근 7일 일별 주행 거리 |
+| GET | `/api/robot/{id}/stats/monthly` | VIEWER+ | 최근 30일 일별 주행 거리 |
+| GET | `/api/robot/{id}/events` | VIEWER+ | 최근 이벤트 20건 |
+| GET | `/api/robot/{id}/map` | VIEWER+ | 최신 SLAM 맵 (PNG) |
+| GET | `/api/robot/{id}/map/info` | VIEWER+ | 맵 메타데이터 |
 
 ### 제어
 
+| Method | Endpoint | 권한 | 설명 |
+|--------|----------|------|------|
+| POST | `/api/robot/{id}/command/estop` | OPERATOR+ | 긴급 정지 |
+| POST | `/api/robot/{id}/command/estop/clear` | OPERATOR+ | 긴급 정지 해제 |
+| POST | `/api/robot/{id}/command/goal` | OPERATOR+ | Nav2 목표 전송 |
+| POST | `/api/robot/{id}/command/velocity` | OPERATOR+ | `/cmd_vel` 직접 발행 |
+| POST | `/api/robot/{id}/detection` | OPERATOR+ | YOLO 감지 결과 수신 |
+| POST | `/api/robot/{id}/events/{eventId}/ack` | OPERATOR+ | 이벤트 ACK |
+
+### 태스크
+
+| Method | Endpoint | 권한 | 설명 |
+|--------|----------|------|------|
+| GET | `/api/tasks` | VIEWER+ | 전체 태스크 목록 |
+| POST | `/api/tasks` | OPERATOR+ | 태스크 생성 |
+| POST | `/api/tasks/{id}/execute` | OPERATOR+ | 태스크 실행 (Nav2 발행) |
+| POST | `/api/tasks/{id}/complete` | OPERATOR+ | 태스크 완료 처리 |
+| POST | `/api/tasks/{id}/cancel` | OPERATOR+ | 태스크 취소 |
+| POST | `/api/tasks/{id}/fail` | OPERATOR+ | 태스크 실패 처리 |
+
+### 관리자 (ADMIN 전용)
+
 | Method | Endpoint | 설명 |
 |--------|----------|------|
-| POST | `/api/robot/{id}/command/estop` | 긴급 정지 |
-| POST | `/api/robot/{id}/command/estop/clear` | 긴급 정지 해제 |
-| POST | `/api/robot/{id}/command/goal` | Nav2 목표 전송 `{"x","y","theta"}` |
-| POST | `/api/robot/{id}/command/velocity` | `/cmd_vel` 직접 발행 `{"linear","angular"}` |
-| POST | `/api/robot/{id}/detection` | YOLO 감지 결과 수신 |
-| POST | `/api/robot/{id}/events/{eventId}/ack` | 이벤트 ACK |
+| GET | `/admin/users` | 사용자 목록 |
+| POST | `/admin/users` | 사용자 생성 |
+| PUT | `/admin/users/{id}/role` | 역할 변경 |
+| PUT | `/admin/users/{id}/toggle` | 활성화/비활성화 |
+| GET | `/admin/robots` | 로봇 목록 |
+| POST | `/admin/robots` | 로봇 등록 (rosbridge 동적 연결) |
+| DELETE | `/admin/robots/{id}` | 로봇 제거 (rosbridge 연결 해제) |
 
 ---
 
@@ -201,29 +287,57 @@ rosbridge:
 
 ```
 amr-control-tower/
-├── eureka-server/                     ← 서비스 디스커버리 (포트 8761)
-├── api-gateway/                       ← API Gateway (포트 8000)
-├── docs/
-│   └── dashboard-preview.png          ← 대시보드 스크린샷
+├── eureka-server/                          ← 서비스 디스커버리 (포트 8761)
+├── api-gateway/                            ← API Gateway (포트 8000)
+├── docs/                                   ← 스크린샷
+│   ├── dashboard-en.png
+│   ├── dashboard-ko.png
+│   ├── fleet.png
+│   ├── tasks.png
+│   └── admin.png
 └── src/main/java/com/amr/dashboard/
     ├── config/
-    │   ├── RosBridgeConfig.java        # 멀티 로봇 rosbridge 설정 (scan-topic 포함)
+    │   ├── SecurityConfig.java             # Spring Security RBAC 설정
+    │   ├── RosBridgeConfig.java
     │   └── WebSocketConfig.java
     ├── controller/
+    │   ├── AuthController.java             # GET /login
     │   ├── DashboardController.java
+    │   ├── TaskController.java             # /tasks, /api/tasks/**
+    │   ├── AdminController.java            # /admin (ADMIN 전용)
+    │   ├── CommandController.java          # @PreAuthorize OPERATOR+
     │   ├── RobotApiController.java
-    │   ├── CommandController.java      # /cmd_vel velocity 엔드포인트 포함
     │   ├── DetectionController.java
     │   └── MapController.java
+    ├── domain/
+    │   ├── User.java / UserRepository.java
+    │   ├── Role.java                       # VIEWER / OPERATOR / ADMIN
+    │   ├── Task.java / TaskRepository.java
+    │   ├── TaskStatus.java / TaskType.java
+    │   └── RobotRegistration.java / RobotRegistrationRepository.java
     ├── ros/
-    │   ├── RosBridgeClient.java        # odom/scan/map/tf/battery 구독
-    │   └── RosBridgeManager.java
-    └── service/
-        ├── RobotStatusService.java     # TF 보정, 상태머신, LiDAR 처리
-        ├── RobotCommandService.java    # cmd_vel, Nav2 goal
-        ├── MapService.java             # OccupancyGrid → PNG
-        ├── RobotMetricsService.java    # Prometheus 메트릭
-        └── RobotStatsService.java
+    │   ├── RosBridgeClient.java            # odom/scan/map/tf/battery 구독
+    │   └── RosBridgeManager.java           # 동적 connectRobot/disconnectRobot
+    ├── service/
+    │   ├── AuthService.java                # 사용자 생성·변경 (UserDetailsService)
+    │   ├── TaskService.java                # 태스크 CRUD + 상태머신
+    │   ├── RobotRegistrationService.java   # 로봇 등록·해제
+    │   ├── NotificationService.java        # Slack Webhook 알림
+    │   ├── RobotStatusService.java
+    │   ├── RobotCommandService.java
+    │   ├── MapService.java
+    │   ├── RobotMetricsService.java
+    │   └── RobotStatsService.java
+    └── resources/
+        ├── templates/
+        │   ├── login.html
+        │   ├── dashboard.html
+        │   ├── fleet.html
+        │   ├── tasks.html
+        │   └── admin.html
+        └── static/
+            ├── css/dashboard.css
+            └── js/i18n.js                  # EN/KO/JA 다국어 지원
 ```
 
 ---
@@ -264,3 +378,16 @@ amr-control-tower/
 - [x] 선속도·각속도 슬라이더 동적 조절
 - [x] 산업급 다크 HUD UI 전면 재설계 — 3컬럼 레이아웃, Inter + JetBrains Mono
 - [x] OccupancyGrid WebSocket 안정화 (throttle 5s, queue_length 1)
+
+### Phase 4 — 상용 보안·운영 기능 (완료)
+- [x] Spring Security 폼 로그인 — CSRF, 세션 관리
+- [x] RBAC 3단계 — VIEWER / OPERATOR / ADMIN
+- [x] 사용자 관리 — Admin 패널 계정 CRUD, 역할·비밀번호·활성화 토글
+- [x] 로봇 동적 등록 — Admin 패널 rosbridge 연결/해제
+- [x] Task 관리 시스템 — QUEUED→EXECUTING→COMPLETED 상태머신, Nav2 자동 발행
+- [x] Task 우선순위 큐 (Priority 1~5)
+- [x] Slack Webhook 알림 — 배터리 저하·오류·긴급 정지 자동 발송
+- [x] 다국어 지원 — EN / KO / JA localStorage 영구 저장
+- [x] SLAM 맵 Canvas HiDPI — devicePixelRatio 스케일링, 반응형 정사각형 유지
+- [x] SpringDoc OpenAPI 3 — Swagger UI 자동 문서화
+- [x] Zinc 다크 사이드바 UI 전면 재설계 — login·dashboard·fleet·tasks·admin 5개 페이지

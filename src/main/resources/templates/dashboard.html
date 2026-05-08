@@ -9,6 +9,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" th:href="@{/css/dashboard.css}">
+    <script th:src="@{/js/i18n.js}"></script>
     <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -34,21 +35,21 @@
                     <path stroke-linecap="round" stroke-linejoin="round"
                           d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z"/>
                 </svg>
-                <span>Dashboard</span>
+                <span data-i18n="nav.dashboard">Dashboard</span>
             </a>
             <a href="/fleet" class="sidenav-link">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16" height="16">
                     <path stroke-linecap="round" stroke-linejoin="round"
                           d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 0 0-10.026 0 1.106 1.106 0 0 0-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12"/>
                 </svg>
-                <span>Fleet</span>
+                <span data-i18n="nav.fleet">Fleet</span>
             </a>
             <a href="/tasks" class="sidenav-link">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16" height="16">
                     <path stroke-linecap="round" stroke-linejoin="round"
                           d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z"/>
                 </svg>
-                <span>Tasks</span>
+                <span data-i18n="nav.tasks">Tasks</span>
             </a>
             <a href="/admin" class="sidenav-link" sec:authorize="hasRole('ADMIN')">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16" height="16">
@@ -56,7 +57,7 @@
                           d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 0 1 0 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 0 1 0-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28Z"/>
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/>
                 </svg>
-                <span>Admin</span>
+                <span data-i18n="nav.admin">Admin</span>
             </a>
         </div>
 
@@ -96,6 +97,12 @@
                     <span class="pill-label">Units</span>
                     <span class="pill-val" th:text="${robots.size()}">1</span>
                 </div>
+                <!-- 언어 선택기 -->
+                <div class="lang-picker">
+                    <button class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
+                    <button class="lang-btn" data-lang="ko" onclick="setLang('ko')">한</button>
+                    <button class="lang-btn" data-lang="ja" onclick="setLang('ja')">日</button>
+                </div>
                 <span id="clock" class="clock-text"></span>
             </div>
         </header>
@@ -118,39 +125,39 @@
 
                 <div class="panel-block">
                     <div class="panel-block-header">
-                        <span class="panel-block-title">State</span>
+                        <span class="panel-block-title" data-i18n="label.state">State</span>
                         <span id="state-badge" class="state-badge state-idle">Idle</span>
                     </div>
                 </div>
 
                 <div class="panel-block">
                     <div class="panel-block-header">
-                        <span class="panel-block-title">Telemetry</span>
+                        <span class="panel-block-title" data-i18n="label.telemetry">Telemetry</span>
                         <span class="panel-block-meta" id="val-last-time">—</span>
                     </div>
                     <div class="telem-grid">
                         <div class="telem-row">
-                            <span class="telem-key">Robot ID</span>
+                            <span class="telem-key" data-i18n="label.robotId">Robot ID</span>
                             <span class="telem-val mono" id="val-robot-id">—</span>
                         </div>
                         <div class="telem-row">
-                            <span class="telem-key">Pos X</span>
+                            <span class="telem-key" data-i18n="label.posX">Pos X</span>
                             <span class="telem-val mono" id="val-pos-x">—</span>
                         </div>
                         <div class="telem-row">
-                            <span class="telem-key">Pos Y</span>
+                            <span class="telem-key" data-i18n="label.posY">Pos Y</span>
                             <span class="telem-val mono" id="val-pos-y">—</span>
                         </div>
                         <div class="telem-row">
-                            <span class="telem-key">Yaw</span>
+                            <span class="telem-key" data-i18n="label.yaw">Yaw</span>
                             <span class="telem-val mono" id="val-yaw">—</span>
                         </div>
                         <div class="telem-row">
-                            <span class="telem-key">Linear vel</span>
+                            <span class="telem-key" data-i18n="label.linearVel">Linear vel</span>
                             <span class="telem-val mono" id="val-linear">—</span>
                         </div>
                         <div class="telem-row">
-                            <span class="telem-key">Angular vel</span>
+                            <span class="telem-key" data-i18n="label.angularVel">Angular vel</span>
                             <span class="telem-val mono" id="val-angular">—</span>
                         </div>
                     </div>
@@ -158,7 +165,7 @@
 
                 <div class="panel-block">
                     <div class="panel-block-header">
-                        <span class="panel-block-title">Battery</span>
+                        <span class="panel-block-title" data-i18n="label.battery">Battery</span>
                         <span class="telem-val mono" id="val-battery" style="font-size:0.8rem">—%</span>
                     </div>
                     <div class="battery-bar-bg">
@@ -168,16 +175,16 @@
 
                 <div class="panel-block">
                     <div class="panel-block-header">
-                        <span class="panel-block-title">Session</span>
+                        <span class="panel-block-title" data-i18n="label.session">Session</span>
                     </div>
                     <div class="stat-row">
                         <div class="stat-card">
                             <div class="stat-val mono" id="stat-distance">—</div>
-                            <div class="stat-label">Distance (m)</div>
+                            <div class="stat-label" data-i18n="label.distance">Distance (m)</div>
                         </div>
                         <div class="stat-card">
                             <div class="stat-val mono" id="stat-uptime">—</div>
-                            <div class="stat-label">Uptime (s)</div>
+                            <div class="stat-label" data-i18n="label.uptime">Uptime (s)</div>
                         </div>
                     </div>
                 </div>
@@ -189,11 +196,11 @@
 
                 <div class="panel-block map-block">
                     <div class="panel-block-header">
-                        <span class="panel-block-title">SLAM Map</span>
+                        <span class="panel-block-title" data-i18n="map.title">SLAM Map</span>
                         <div class="map-controls">
-                            <button class="chip-btn active" id="btn-scan-toggle" onclick="toggleScan()">LiDAR</button>
-                            <button class="chip-btn" onclick="clearPath()">Clear path</button>
-                            <span class="map-hint">Click map to send nav goal</span>
+                            <button class="chip-btn active" id="btn-scan-toggle" onclick="toggleScan()" data-i18n="map.lidar">LiDAR</button>
+                            <button class="chip-btn" onclick="clearPath()" data-i18n="map.clearPath">Clear path</button>
+                            <span class="map-hint" data-i18n="map.hint">Click map to send nav goal</span>
                         </div>
                     </div>
                     <div class="map-wrap">
@@ -204,8 +211,8 @@
 
                 <div class="panel-block">
                     <div class="panel-block-header">
-                        <span class="panel-block-title">Linear Velocity</span>
-                        <span class="panel-block-meta">m/s</span>
+                        <span class="panel-block-title" data-i18n="chart.linearVel">Linear Velocity</span>
+                        <span class="panel-block-meta" data-i18n="chart.ms">m/s</span>
                     </div>
                     <canvas id="speed-chart" height="80"></canvas>
                 </div>
@@ -217,7 +224,7 @@
 
                 <div class="panel-block">
                     <div class="panel-block-header">
-                        <span class="panel-block-title">Mission History</span>
+                        <span class="panel-block-title" data-i18n="chart.mission">Mission History</span>
                         <div class="chart-tabs">
                             <button class="chart-tab active" onclick="switchChart('weekly', this)">7D</button>
                             <button class="chart-tab" onclick="switchChart('monthly', this)">30D</button>
@@ -234,39 +241,39 @@
         <section class="control-bar" th:if="${isOperator}">
 
             <div class="ctrl-group">
-                <div class="ctrl-group-label">Command</div>
+                <div class="ctrl-group-label" data-i18n="ctrl.command">Command</div>
                 <div class="cmd-row">
-                    <button class="cmd-btn cmd-estop" onclick="sendEstop()">E-Stop</button>
-                    <button class="cmd-btn cmd-clear" onclick="clearEstop()">Resume</button>
+                    <button class="cmd-btn cmd-estop" onclick="sendEstop()" data-i18n="ctrl.estop">E-Stop</button>
+                    <button class="cmd-btn cmd-clear" onclick="clearEstop()" data-i18n="ctrl.resume">Resume</button>
                 </div>
                 <div class="goal-form">
                     <div class="goal-field">
-                        <label>X (m)</label>
+                        <label data-i18n="ctrl.labelX">X (m)</label>
                         <input id="goal-x" type="number" step="0.1" value="0" class="goal-input">
                     </div>
                     <div class="goal-field">
-                        <label>Y (m)</label>
+                        <label data-i18n="ctrl.labelY">Y (m)</label>
                         <input id="goal-y" type="number" step="0.1" value="0" class="goal-input">
                     </div>
                     <div class="goal-field">
-                        <label>Theta</label>
+                        <label data-i18n="ctrl.labelTheta">Theta</label>
                         <input id="goal-theta" type="number" step="0.1" value="0" class="goal-input">
                     </div>
-                    <button class="cmd-btn cmd-goal" onclick="sendGoal()">Send goal</button>
+                    <button class="cmd-btn cmd-goal" onclick="sendGoal()" data-i18n="ctrl.sendGoal">Send goal</button>
                 </div>
             </div>
 
             <div class="ctrl-group">
-                <div class="ctrl-group-label">Velocity Limits</div>
+                <div class="ctrl-group-label" data-i18n="ctrl.velLimits">Velocity Limits</div>
                 <div class="slider-group">
                     <div class="slider-row">
-                        <span class="slider-name">Linear</span>
+                        <span class="slider-name" data-i18n="ctrl.linear">Linear</span>
                         <input type="range" id="sl-linear" min="0.1" max="1.0" step="0.1" value="0.3"
                                oninput="document.getElementById('lbl-linear').textContent=this.value">
                         <span class="slider-val mono"><span id="lbl-linear">0.3</span> m/s</span>
                     </div>
                     <div class="slider-row">
-                        <span class="slider-name">Angular</span>
+                        <span class="slider-name" data-i18n="ctrl.angular">Angular</span>
                         <input type="range" id="sl-angular" min="0.1" max="1.5" step="0.1" value="0.5"
                                oninput="document.getElementById('lbl-angular').textContent=this.value">
                         <span class="slider-val mono"><span id="lbl-angular">0.5</span> r/s</span>
@@ -275,7 +282,7 @@
             </div>
 
             <div class="ctrl-group">
-                <div class="ctrl-group-label">Manual Drive <span class="kbd-hint">WASD / Arrows / Space=Stop</span></div>
+                <div class="ctrl-group-label"><span data-i18n="ctrl.manualDrive">Manual Drive</span> <span class="kbd-hint" data-i18n="ctrl.kbHint">WASD / Arrows / Space=Stop</span></div>
                 <div class="dpad">
                     <div class="dpad-row">
                         <button class="dpad-btn" id="dpad-up"
@@ -313,7 +320,7 @@
         <!-- Event Log -->
         <section class="event-section">
             <div class="event-header">
-                <span class="event-title">Event Log</span>
+                <span class="event-title" data-i18n="event.title">Event Log</span>
                 <span class="event-badge" id="event-count">0</span>
             </div>
             <ul id="event-list" class="event-list"></ul>
@@ -352,7 +359,7 @@
         const txt = document.getElementById('conn-status');
         const pill = document.getElementById('conn-pill');
         dot.className = 'conn-dot ' + (online ? 'connected' : 'disconnected');
-        txt.textContent = online ? 'Connected' : 'Disconnected';
+        txt.textContent = online ? t('conn.connected') : t('conn.disconnected');
         pill.classList.toggle('pill-online', online);
     }
 
@@ -403,8 +410,7 @@
 
     function updateStateBadge(state) {
         const badge = document.getElementById('state-badge');
-        const labels = { IDLE: 'Idle', MOVING: 'Moving', EMERGENCY_STOP: 'E-Stop', CHARGING: 'Charging', ERROR: 'Error' };
-        badge.textContent = labels[state] || state;
+        badge.textContent = t('state.' + state) || state;
         badge.className = 'state-badge state-' + state.toLowerCase().replace(/_/g, '-');
     }
 
@@ -419,9 +425,15 @@
 
     // ── Map ───────────────────────────────────────────────────────
     const mapCanvas = document.getElementById('map-canvas');
-    const mapCtx    = mapCanvas.getContext('2d');
-    mapCtx.imageSmoothingEnabled = false;
-    const MAP_SCALE = 30, MAP_CX = mapCanvas.width / 2, MAP_CY = mapCanvas.height / 2;
+    const dpr = window.devicePixelRatio || 1;
+    const CANVAS_LOGICAL = 512;
+    mapCanvas.width  = CANVAS_LOGICAL * dpr;
+    mapCanvas.height = CANVAS_LOGICAL * dpr;
+    const mapCtx = mapCanvas.getContext('2d');
+    mapCtx.scale(dpr, dpr);
+    mapCtx.imageSmoothingEnabled = true;
+    mapCtx.imageSmoothingQuality = 'high';
+    const MAP_SCALE = 30, MAP_CX = CANVAS_LOGICAL / 2, MAP_CY = CANVAS_LOGICAL / 2;
     const pathPoints = [];
 
     function loadMapImage(robotId) {
@@ -434,25 +446,25 @@
         if (!mapInfo) return { px: MAP_CX + x * MAP_SCALE, py: MAP_CY - y * MAP_SCALE };
         const mapPxX = (x - mapInfo.originX) / mapInfo.resolution;
         const mapPxY = mapInfo.height - (y - mapInfo.originY) / mapInfo.resolution;
-        return { px: (mapPxX / mapInfo.width) * mapCanvas.width, py: (mapPxY / mapInfo.height) * mapCanvas.height };
+        return { px: (mapPxX / mapInfo.width) * CANVAS_LOGICAL, py: (mapPxY / mapInfo.height) * CANVAS_LOGICAL };
     }
 
     function canvasToWorld(px, py) {
         if (!mapInfo) return { x: 0, y: 0 };
-        const mapPxX = (px / mapCanvas.width) * mapInfo.width;
-        const mapPxY = (py / mapCanvas.height) * mapInfo.height;
+        const mapPxX = (px / CANVAS_LOGICAL) * mapInfo.width;
+        const mapPxY = (py / CANVAS_LOGICAL) * mapInfo.height;
         return { x: mapPxX * mapInfo.resolution + mapInfo.originX, y: (mapInfo.height - mapPxY) * mapInfo.resolution + mapInfo.originY };
     }
 
     function redrawMap() {
-        mapCtx.clearRect(0, 0, mapCanvas.width, mapCanvas.height);
+        mapCtx.clearRect(0, 0, CANVAS_LOGICAL, CANVAS_LOGICAL);
         if (mapImage && mapInfo) {
-            mapCtx.drawImage(mapImage, 0, 0, mapCanvas.width, mapCanvas.height);
+            mapCtx.drawImage(mapImage, 0, 0, CANVAS_LOGICAL, CANVAS_LOGICAL);
         } else {
             mapCtx.strokeStyle = '#27272a';
             mapCtx.lineWidth = 0.5;
-            for (let i = 0; i < mapCanvas.width; i += MAP_SCALE) { mapCtx.beginPath(); mapCtx.moveTo(i, 0); mapCtx.lineTo(i, mapCanvas.height); mapCtx.stroke(); }
-            for (let j = 0; j < mapCanvas.height; j += MAP_SCALE) { mapCtx.beginPath(); mapCtx.moveTo(0, j); mapCtx.lineTo(mapCanvas.width, j); mapCtx.stroke(); }
+            for (let i = 0; i < CANVAS_LOGICAL; i += MAP_SCALE) { mapCtx.beginPath(); mapCtx.moveTo(i, 0); mapCtx.lineTo(i, CANVAS_LOGICAL); mapCtx.stroke(); }
+            for (let j = 0; j < CANVAS_LOGICAL; j += MAP_SCALE) { mapCtx.beginPath(); mapCtx.moveTo(0, j); mapCtx.lineTo(CANVAS_LOGICAL, j); mapCtx.stroke(); }
         }
         if (showScan && lastScan && lastStatus) {
             const { angleMin, angleIncrement, ranges } = lastScan;
@@ -505,8 +517,8 @@
     mapCanvas.addEventListener('click', (e) => {
         if (!mapInfo) return;
         const rect = mapCanvas.getBoundingClientRect();
-        const px = (e.clientX - rect.left) * mapCanvas.width / rect.width;
-        const py = (e.clientY - rect.top) * mapCanvas.height / rect.height;
+        const px = (e.clientX - rect.left) / rect.width * CANVAS_LOGICAL;
+        const py = (e.clientY - rect.top)  / rect.height * CANVAS_LOGICAL;
         const world = canvasToWorld(px, py);
         navGoalMarker = world;
         document.getElementById('goal-x').value = world.x.toFixed(2);
@@ -521,11 +533,15 @@
 
     // ── Compass ───────────────────────────────────────────────────
     const compassCanvas = document.getElementById('compass-canvas');
+    const COMPASS_LOGICAL = 72;
+    compassCanvas.width  = COMPASS_LOGICAL * dpr;
+    compassCanvas.height = COMPASS_LOGICAL * dpr;
     const compassCtx = compassCanvas.getContext('2d');
+    compassCtx.scale(dpr, dpr);
 
     function updateCompass(yaw) {
-        const cx = compassCanvas.width / 2, cy = compassCanvas.height / 2, r = cx - 4;
-        compassCtx.clearRect(0, 0, compassCanvas.width, compassCanvas.height);
+        const cx = COMPASS_LOGICAL / 2, cy = COMPASS_LOGICAL / 2, r = cx - 4;
+        compassCtx.clearRect(0, 0, COMPASS_LOGICAL, COMPASS_LOGICAL);
         compassCtx.beginPath(); compassCtx.arc(cx, cy, r, 0, Math.PI * 2);
         compassCtx.fillStyle = '#18181b'; compassCtx.fill();
         compassCtx.strokeStyle = '#3f3f46'; compassCtx.lineWidth = 1; compassCtx.stroke();
