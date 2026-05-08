@@ -51,13 +51,15 @@ Spring Security RBAC 인증, Task 관리, 다국어(EN/KO/JA) 지원을 갖춘 �
 - **D-Pad 조이스틱** — 마우스 클릭 + 터치 지원 방향 제어
 - **WASD / 방향키** — 키보드 실시간 `/cmd_vel` 발행 (100ms 루프)
 - **속도 슬라이더** — 선속도(0.1~1.0 m/s) · 각속도(0.1~1.5 rad/s) 동적 조절
-- **맵 클릭 → Nav2 목표** — Canvas 좌표를 world 좌표로 역변환 후 `/move_base_simple/goal` 발행
+- **맵 클릭 → Nav2 목표** — Canvas 좌표를 world 좌표로 역변환 후 `/goal_pose` 발행
 - **긴급 정지 (E-Stop)** — 즉시 zero twist + EMERGENCY_STOP 상태 전환
+- **WASD Watchdog** — 브라우저 탭 닫힘·네트워크 단절 시 1.5초 후 자동 zero velocity 전송
 - **Resilience4j Circuit Breaker** — 명령 API 장애 격리
 
 ### Fleet 관리
 - **Fleet 전체 뷰** (`/fleet`) — 전체 로봇 카드 그리드 + 개별 실시간 상태
-- **로봇 상태머신** — IDLE / MOVING / EMERGENCY_STOP / CHARGING / ERROR
+- **로봇 상태머신** — IDLE / MOVING / EMERGENCY_STOP / CHARGING / ERROR / **OFFLINE**
+- **오프라인 자동 감지** — 5초 이상 메시지 없으면 OFFLINE 전환 + 깜빡임 뱃지, 복구 시 자동 IDLE 복귀
 - **이벤트 로그** — 배터리 저하, 장애물 감지, YOLO 감지, 목표 도달 실시간 이벤트
 - **이벤트 ACK** — 확인 처리 (ackStatus, ackedAt)
 - **주간/월간 주행 통계** — 일별 주행 거리 바 차트
@@ -124,7 +126,7 @@ Spring Security RBAC 인증, Task 관리, 다국어(EN/KO/JA) 지원을 갖춘 �
 │  RobotStatusService → STOMP push → 브라우저           │
 │  RobotCommandService (CircuitBreaker)                 │
 │    → /cmd_vel (D-Pad / WASD)                         │
-│    → /move_base_simple/goal (맵 클릭 / 폼)           │
+│    → /goal_pose (맵 클릭 / 폼)           │
 │                                                      │
 │  MapController → GET /api/robot/{id}/map (PNG)       │
 └──────────────────────────────────────────────────────┘
@@ -160,9 +162,14 @@ export TURTLEBOT3_MODEL=burger
 ros2 launch turtlebot3_gazebo turtlebot3_world.launch.py
 
 # 터미널 2 — SLAM toolbox (실시간 맵 생성)
+export TURTLEBOT3_MODEL=burger
 ros2 launch slam_toolbox online_async_launch.py use_sim_time:=True
 
-# 터미널 3 — rosbridge WebSocket 서버
+# 터미널 3 — Nav2 자율 이동 스택
+export TURTLEBOT3_MODEL=burger
+ros2 launch nav2_bringup navigation_launch.py use_sim_time:=True
+
+# 터미널 4 — rosbridge WebSocket 서버
 ros2 launch rosbridge_server rosbridge_websocket_launch.xml
 ```
 
@@ -391,3 +398,18 @@ amr-control-tower/
 - [x] SLAM 맵 Canvas HiDPI — devicePixelRatio 스케일링, 반응형 정사각형 유지
 - [x] SpringDoc OpenAPI 3 — Swagger UI 자동 문서화
 - [x] Zinc 다크 사이드바 UI 전면 재설계 — login·dashboard·fleet·tasks·admin 5개 페이지
+
+### Phase 5 — 운영 안정화 (완료)
+- [x] GitHub Actions CI — Java 21 + Gradle 캐시, dev 프로파일 자동 테스트
+- [x] 단위 테스트 43개 — TaskService·AuthService·RobotRegistrationService·NotificationService·TaskDomain
+- [x] Secrets 관리 — `.env.example` change_me 형식, `.gitignore` 보호
+- [x] Flyway DB 마이그레이션 — V1(전체 스키마)·V2(audit_log)·V3(robot_topics), prod ddl-auto:validate
+- [x] Nginx + Let's Encrypt HTTPS — TLSv1.2/1.3, HSTS, WebSocket 프록시, certbot 자동갱신
+- [x] Redis 분산 세션 — spring-session-data-redis, prod 전용 활성화, dev autoconfigure 제외
+- [x] Rate Limiting — Gateway Redis 토큰버킷, IP 기반 초당 10 req
+- [x] 감사 로그(Audit Log) — AOP @Around, Admin·Task 변경 이력 DB 기록, 민감 필드 마스킹
+- [x] WASD Watchdog — 브라우저 단절 1.5초 후 자동 정지, RobotWatchdogService 분리
+- [x] 로봇 오프라인 감지 — 5초 무응답 시 OFFLINE 상태 전환·깜빡임 뱃지·이벤트 발행
+- [x] 배터리 파싱 강화 — percentage/voltage 다중 포맷 대응, 0~100 자동 보정
+- [x] 토픽 이름 설정 가능 — goalTopic·cmdVelTopic DB 저장, 로봇별 독립 설정
+- [x] Nav2 토픽 수정 — `/move_base_simple/goal` → `/goal_pose` (ROS2 표준)

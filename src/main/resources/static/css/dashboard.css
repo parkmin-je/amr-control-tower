@@ -312,6 +312,8 @@ input { font-family: inherit; }
 .state-emergency-stop { background: rgba(248,113,113,0.12); color: var(--red); }
 .state-error          { background: rgba(248,113,113,0.12); color: var(--red); }
 .state-charging       { background: rgba(74,222,128,0.12); color: var(--green); }
+.state-offline        { background: rgba(113,113,122,0.3);  color: #a1a1aa; animation: blink-offline 1.5s step-start infinite; }
+@keyframes blink-offline { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
 /* ── Telemetry ────────────────────────────────────────────────── */
 .telem-grid { display: flex; flex-direction: column; gap: 3px; }

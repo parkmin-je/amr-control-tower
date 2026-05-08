@@ -16,6 +16,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -60,6 +61,11 @@ public class RobotStatusService {
     // /odom 메시지 처리
     public void onOdom(String robotId, JsonNode msg) {
         RobotStatusCache current = cache.computeIfAbsent(robotId, RobotStatusCache::new);
+        current.lastMessageTime = Instant.now();
+        if (current.state == RobotState.OFFLINE) {
+            current.state = RobotState.IDLE;
+            publishEvent(robotId, RobotEvent.EventType.STARTED, "로봇 온라인 복구");
+        }
 
         JsonNode pose = msg.path("pose").path("pose");
         JsonNode twist = msg.path("twist").path("twist");
@@ -129,8 +135,19 @@ public class RobotStatusService {
     // /battery_state 메시지 처리
     public void onBattery(String robotId, JsonNode msg) {
         RobotStatusCache current = cache.computeIfAbsent(robotId, RobotStatusCache::new);
+        current.lastMessageTime = Instant.now();
 
-        double percentage = msg.path("percentage").asDouble(1.0);
+        // percentage 필드: ROS 표준은 0.0~1.0, 일부 로봇은 0~100 또는 누락
+        double percentage = msg.path("percentage").asDouble(-1.0);
+        if (percentage < 0) {
+            // percentage 없음 → voltage 기반 추정 (design_capacity 있을 때)
+            double voltage = msg.path("voltage").asDouble(0);
+            double capacity = msg.path("design_capacity").asDouble(0);
+            percentage = (voltage > 0 && capacity > 0) ? (voltage / capacity) : 1.0;
+        } else if (percentage > 1.0) {
+            percentage = percentage / 100.0; // 이미 0~100 범위인 경우
+        }
+        percentage = Math.max(0, Math.min(1, percentage));
         current.battery = (int) (percentage * 100);
         metricsService.updateBattery(robotId, current.battery);
 
@@ -198,6 +215,50 @@ public class RobotStatusService {
         }
     }
 
+    /** 수동 드라이브 명령 수신 시 호출 — watchdog 타이머 갱신 */
+    public void onManualDriveCmd(String robotId) {
+        RobotStatusCache c = cache.computeIfAbsent(robotId, RobotStatusCache::new);
+        c.lastManualCmdTime = Instant.now();
+        c.manualDriveActive = true;
+    }
+
+    /** 수동 드라이브 타임아웃 시 RobotWatchdogService에서 호출 */
+    public void onManualDriveTimeout(String robotId) {
+        RobotStatusCache c = cache.get(robotId);
+        if (c != null) c.manualDriveActive = false;
+    }
+
+    /** watchdog이 체크할 수동 드라이브 만료 로봇 ID 목록 반환 */
+    public List<String> getManualDriveExpiredRobots(Instant threshold) {
+        List<String> expired = new ArrayList<>();
+        cache.forEach((robotId, c) -> {
+            if (c.manualDriveActive && c.lastManualCmdTime != null && c.lastManualCmdTime.isBefore(threshold))
+                expired.add(robotId);
+        });
+        return expired;
+    }
+
+    /** offline 감지 대상 로봇 ID 목록 반환 */
+    public List<String> getOfflineDetectedRobots(Instant threshold) {
+        List<String> result = new ArrayList<>();
+        cache.forEach((robotId, c) -> {
+            if (c.lastMessageTime != null && c.lastMessageTime.isBefore(threshold)
+                    && c.state != RobotState.OFFLINE)
+                result.add(robotId);
+        });
+        return result;
+    }
+
+    /** RobotWatchdogService에서 호출 — OFFLINE 상태 전환 */
+    public void markOffline(String robotId) {
+        RobotStatusCache c = cache.get(robotId);
+        if (c != null) {
+            c.state = RobotState.OFFLINE;
+            publishStatus(robotId, c);
+            publishEvent(robotId, RobotEvent.EventType.ERROR, "로봇 통신 끊김 (5초 이상 응답 없음)");
+        }
+    }
+
     // dev 환경 전용: Kafka 없이 직접 DB 저장
     @Scheduled(fixedRateString = "${robot.status-save-interval-ms}")
     @Transactional
@@ -258,12 +319,16 @@ public class RobotStatusService {
     private static class RobotStatusCache {
         String robotId;
         double posX, posY, linearVel, angularVel, yaw;
-        // map→odom TF 변환 (기본값 0 → TF 수신 전에는 odom=map으로 동작)
         double mapOdomTx = 0, mapOdomTy = 0, mapOdomYaw = 0;
         int battery = 100;
         boolean lowBatteryAlerted = false;
         RobotState state = RobotState.IDLE;
         boolean emergencyStopped = false;
+        // 오프라인 감지
+        Instant lastMessageTime = null;
+        // WASD watchdog
+        Instant lastManualCmdTime = null;
+        boolean manualDriveActive = false;
 
         RobotStatusCache(String robotId) {
             this.robotId = robotId;

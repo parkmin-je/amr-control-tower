@@ -34,6 +34,12 @@ public class RobotRegistration {
     @Column(length = 50)
     private String scanTopic = "/scan";
 
+    @Column(length = 100)
+    private String goalTopic = "/goal_pose";
+
+    @Column(length = 100)
+    private String cmdVelTopic = "/cmd_vel";
+
     @Column(nullable = false)
     private boolean enabled = true;
 

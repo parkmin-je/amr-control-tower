@@ -1,6 +1,8 @@
 package com.amr.dashboard.service;
 
 import com.amr.dashboard.domain.RobotEvent;
+import com.amr.dashboard.domain.RobotRegistration;
+import com.amr.dashboard.domain.RobotRegistrationRepository;
 import com.amr.dashboard.ros.RosBridgeManager;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
@@ -17,12 +19,16 @@ public class RobotCommandService {
     private final RosBridgeManager rosBridgeManager;
     private final RobotStatusService robotStatusService;
     private final RobotMetricsService metricsService;
+    private final RobotRegistrationRepository registrationRepository;
 
     /** 긴급 정지: /cmd_vel 에 zero twist 발행 */
     @CircuitBreaker(name = CB_NAME, fallbackMethod = "stopFallback")
     public void sendEmergencyStop(String robotId) {
+        String cmdVelTopic = registrationRepository.findById(robotId)
+                .map(RobotRegistration::getCmdVelTopic)
+                .orElse("/cmd_vel");
         String zeroTwist = "{\"linear\":{\"x\":0,\"y\":0,\"z\":0},\"angular\":{\"x\":0,\"y\":0,\"z\":0}}";
-        rosBridgeManager.publishToRobot(robotId, "/cmd_vel", "geometry_msgs/Twist", zeroTwist);
+        rosBridgeManager.publishToRobot(robotId, cmdVelTopic, "geometry_msgs/Twist", zeroTwist);
         robotStatusService.setEmergencyStop(robotId);
         metricsService.recordCommand(robotId, "ESTOP");
         log.info("[Command][{}] 긴급 정지 명령 전송", robotId);
@@ -36,10 +42,14 @@ public class RobotCommandService {
 
     /** /cmd_vel 직접 속도 제어 */
     public void sendVelocity(String robotId, double linear, double angular) {
+        String cmdVelTopic = registrationRepository.findById(robotId)
+                .map(RobotRegistration::getCmdVelTopic)
+                .orElse("/cmd_vel");
         String twist = String.format(
                 "{\"linear\":{\"x\":%.4f,\"y\":0.0,\"z\":0.0},\"angular\":{\"x\":0.0,\"y\":0.0,\"z\":%.4f}}",
                 linear, angular);
-        rosBridgeManager.publishToRobot(robotId, "/cmd_vel", "geometry_msgs/Twist", twist);
+        rosBridgeManager.publishToRobot(robotId, cmdVelTopic, "geometry_msgs/Twist", twist);
+        robotStatusService.onManualDriveCmd(robotId);  // watchdog 타이머 갱신
     }
 
     /** 긴급 정지 해제 */
@@ -61,8 +71,11 @@ public class RobotCommandService {
                 "\"pose\":{\"position\":{\"x\":%.4f,\"y\":%.4f,\"z\":0}," +
                 "\"orientation\":{\"x\":0,\"y\":0,\"z\":%.6f,\"w\":%.6f}}}",
                 x, y, sinH, cosH);
-        rosBridgeManager.publishToRobot(robotId, "/move_base_simple/goal",
-                "geometry_msgs/PoseStamped", poseStamped);
+        String goalTopic = registrationRepository.findById(robotId)
+                .map(RobotRegistration::getGoalTopic)
+                .orElse("/goal_pose");
+        rosBridgeManager.publishToRobot(robotId, goalTopic,
+                "geometry_msgs/msg/PoseStamped", poseStamped);
         metricsService.recordCommand(robotId, "NAV_GOAL");
         log.info("[Command][{}] 내비게이션 목표 전송: x={}, y={}, theta={}", robotId, x, y, theta);
     }

@@ -5,5 +5,6 @@ public enum RobotState {
     MOVING,
     CHARGING,
     EMERGENCY_STOP,
-    ERROR
+    ERROR,
+    OFFLINE
 }
