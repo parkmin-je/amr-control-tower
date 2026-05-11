@@ -2,6 +2,7 @@ package com.amr.dashboard.controller;
 
 import com.amr.dashboard.domain.RobotEvent;
 import com.amr.dashboard.service.RobotCommandService;
+import com.amr.dashboard.service.RobotPermissionService;
 import com.amr.dashboard.service.RobotStatusService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMax;
@@ -12,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @Slf4j
@@ -22,11 +24,13 @@ public class CommandController {
 
     private final RobotCommandService commandService;
     private final RobotStatusService robotStatusService;
+    private final RobotPermissionService permissionService;
 
     /** 긴급 정지 */
     @PreAuthorize("hasAnyRole('OPERATOR','ADMIN')")
     @PostMapping("/{robotId}/command/estop")
-    public ResponseEntity<Void> emergencyStop(@PathVariable String robotId) {
+    public ResponseEntity<Void> emergencyStop(@PathVariable String robotId, Authentication auth) {
+        permissionService.assertCanControl(auth.getName(), robotId);
         commandService.sendEmergencyStop(robotId);
         robotStatusService.publishEvent(robotId, RobotEvent.EventType.STOPPED, "긴급 정지 명령 수신");
         return ResponseEntity.ok().build();
@@ -35,7 +39,8 @@ public class CommandController {
     /** 긴급 정지 해제 */
     @PreAuthorize("hasAnyRole('OPERATOR','ADMIN')")
     @PostMapping("/{robotId}/command/estop/clear")
-    public ResponseEntity<Void> clearEmergencyStop(@PathVariable String robotId) {
+    public ResponseEntity<Void> clearEmergencyStop(@PathVariable String robotId, Authentication auth) {
+        permissionService.assertCanControl(auth.getName(), robotId);
         commandService.clearEmergencyStop(robotId);
         return ResponseEntity.ok().build();
     }
@@ -44,7 +49,9 @@ public class CommandController {
     @PreAuthorize("hasAnyRole('OPERATOR','ADMIN')")
     @PostMapping("/{robotId}/command/velocity")
     public ResponseEntity<Void> sendVelocity(@PathVariable String robotId,
-                                              @Valid @RequestBody VelocityRequest req) {
+                                              @Valid @RequestBody VelocityRequest req,
+                                              Authentication auth) {
+        permissionService.assertCanControl(auth.getName(), robotId);
         log.info("[Command][{}] velocity: linear={}, angular={}", robotId, req.linear(), req.angular());
         commandService.sendVelocity(robotId, req.linear(), req.angular());
         return ResponseEntity.ok().build();
@@ -54,7 +61,9 @@ public class CommandController {
     @PreAuthorize("hasAnyRole('OPERATOR','ADMIN')")
     @PostMapping("/{robotId}/command/goal")
     public ResponseEntity<Void> sendGoal(@PathVariable String robotId,
-                                          @Valid @RequestBody NavGoalRequest req) {
+                                          @Valid @RequestBody NavGoalRequest req,
+                                          Authentication auth) {
+        permissionService.assertCanControl(auth.getName(), robotId);
         commandService.sendNavigationGoal(robotId, req.x(), req.y(), req.theta());
         return ResponseEntity.ok().build();
     }

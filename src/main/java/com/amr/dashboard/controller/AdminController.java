@@ -4,7 +4,9 @@ import com.amr.dashboard.domain.Role;
 import com.amr.dashboard.domain.RobotRegistration;
 import com.amr.dashboard.domain.User;
 import com.amr.dashboard.domain.UserRepository;
+import com.amr.dashboard.domain.UserRobotPermission;
 import com.amr.dashboard.service.AuthService;
+import com.amr.dashboard.service.RobotPermissionService;
 import com.amr.dashboard.service.RobotRegistrationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +26,7 @@ public class AdminController {
     private final UserRepository userRepository;
     private final AuthService authService;
     private final RobotRegistrationService robotRegistrationService;
+    private final RobotPermissionService robotPermissionService;
 
     @GetMapping("/admin")
     public String adminPage(Model model) {
@@ -83,6 +86,30 @@ public class AdminController {
     public ResponseEntity<Map<String, String>> deregisterRobot(@PathVariable String robotId) {
         robotRegistrationService.deregister(robotId);
         return ResponseEntity.ok(Map.of("status", "disabled"));
+    }
+
+    // --- Robot Permission Management ---
+
+    @GetMapping("/api/admin/users/{id}/robots")
+    @ResponseBody
+    public List<UserRobotPermission> getUserRobots(@PathVariable Long id) {
+        return robotPermissionService.findByUser(id);
+    }
+
+    @PostMapping("/api/admin/users/{id}/robots")
+    @ResponseBody
+    public ResponseEntity<Map<String, String>> assignRobot(@PathVariable Long id,
+                                                           @RequestBody Map<String, String> body) {
+        robotPermissionService.assign(id, body.get("robotId"));
+        return ResponseEntity.ok(Map.of("status", "assigned"));
+    }
+
+    @DeleteMapping("/api/admin/users/{id}/robots/{robotId}")
+    @ResponseBody
+    public ResponseEntity<Map<String, String>> unassignRobot(@PathVariable Long id,
+                                                              @PathVariable String robotId) {
+        robotPermissionService.unassign(id, robotId);
+        return ResponseEntity.ok(Map.of("status", "unassigned"));
     }
 
     record CreateUserRequest(String username, String password, Role role) {}
