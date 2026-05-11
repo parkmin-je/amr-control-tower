@@ -30,9 +30,9 @@ public class DataInitializer implements CommandLineRunner {
     private void initUsers() {
         if (userRepository.count() > 0) return;
 
-        authService.createUser("admin",    "admin123",    Role.ADMIN);
-        authService.createUser("operator", "operator123", Role.OPERATOR);
-        authService.createUser("viewer",   "viewer123",   Role.VIEWER);
+        authService.createUser("admin",    "Admin1234",    Role.ADMIN);
+        authService.createUser("operator", "Operator1234", Role.OPERATOR);
+        authService.createUser("viewer",   "Viewer1234",   Role.VIEWER);
 
         log.info("[DataInitializer] 기본 사용자 3명 생성 완료 (admin/operator/viewer)");
     }
