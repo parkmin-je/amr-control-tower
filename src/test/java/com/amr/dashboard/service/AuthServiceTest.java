@@ -80,15 +80,15 @@ class AuthServiceTest {
     @DisplayName("createUser — 정상적으로 사용자 생성 및 저장")
     void createUser_success_savesUser() {
         when(userRepository.existsByUsername("newuser")).thenReturn(false);
-        when(passwordEncoder.encode("rawpw")).thenReturn("encoded_pw");
+        when(passwordEncoder.encode("ValidPass1")).thenReturn("encoded_pw");
         User expected = buildUser("newuser", Role.OPERATOR, true);
         when(userRepository.save(any(User.class))).thenReturn(expected);
 
-        User result = authService.createUser("newuser", "rawpw", Role.OPERATOR);
+        User result = authService.createUser("newuser", "ValidPass1", Role.OPERATOR);
 
         assertThat(result.getUsername()).isEqualTo("newuser");
         assertThat(result.getRole()).isEqualTo(Role.OPERATOR);
-        verify(passwordEncoder).encode("rawpw");
+        verify(passwordEncoder).encode("ValidPass1");
         verify(userRepository).save(any(User.class));
     }
 
@@ -103,13 +103,57 @@ class AuthServiceTest {
     }
 
     @Test
+    @DisplayName("createUser — 비밀번호 8자 미만이면 IllegalArgumentException 발생")
+    void createUser_shortPassword_throwsException() {
+        when(userRepository.existsByUsername("newuser")).thenReturn(false);
+
+        assertThatThrownBy(() -> authService.createUser("newuser", "Ab1", Role.VIEWER))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("8자");
+    }
+
+    @Test
+    @DisplayName("createUser — 비밀번호 대문자 없으면 IllegalArgumentException 발생")
+    void createUser_noUppercase_throwsException() {
+        when(userRepository.existsByUsername("newuser")).thenReturn(false);
+
+        assertThatThrownBy(() -> authService.createUser("newuser", "password1", Role.VIEWER))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("대문자");
+    }
+
+    @Test
+    @DisplayName("createUser — 비밀번호 숫자 없으면 IllegalArgumentException 발생")
+    void createUser_noDigit_throwsException() {
+        when(userRepository.existsByUsername("newuser")).thenReturn(false);
+
+        assertThatThrownBy(() -> authService.createUser("newuser", "PasswordNoDigit", Role.VIEWER))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("숫자");
+    }
+
+    @Test
+    @DisplayName("createUser — 유효한 비밀번호(8자+대문자+숫자)이면 정상 생성")
+    void createUser_validPassword_success() {
+        when(userRepository.existsByUsername("newuser")).thenReturn(false);
+        when(passwordEncoder.encode("ValidPass1")).thenReturn("encoded");
+        User expected = buildUser("newuser", Role.VIEWER, true);
+        when(userRepository.save(any(User.class))).thenReturn(expected);
+
+        User result = authService.createUser("newuser", "ValidPass1", Role.VIEWER);
+
+        assertThat(result.getUsername()).isEqualTo("newuser");
+        verify(userRepository).save(any(User.class));
+    }
+
+    @Test
     @DisplayName("changePassword — 새 비밀번호가 인코딩되어 저장됨")
     void changePassword_encodesAndSaves() {
         User user = buildUser("operator", Role.OPERATOR, true);
         when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-        when(passwordEncoder.encode("newpw")).thenReturn("new_encoded");
+        when(passwordEncoder.encode("NewValidPass1")).thenReturn("new_encoded");
 
-        authService.changePassword(1L, "newpw");
+        authService.changePassword(1L, "NewValidPass1");
 
         assertThat(user.getPasswordHash()).isEqualTo("new_encoded");
     }
