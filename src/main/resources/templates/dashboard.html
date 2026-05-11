@@ -336,6 +336,12 @@
         mapSub    = stompClient.subscribe(`/topic/robot/${robotId}/map`,    msg => { mapInfo = JSON.parse(msg.body); loadMapImage(robotId); });
         scanSub   = stompClient.subscribe(`/topic/robot/${robotId}/scan`,   msg => { lastScan = JSON.parse(msg.body); redrawMap(); });
         stompClient.subscribe(`/topic/robot/${robotId}/nav`, msg => updateNavStatus(JSON.parse(msg.body)));
+
+        // 구독 직후 이미 서버에 저장된 맵 즉시 로드 (STOMP 다음 메시지 기다리지 않음)
+        fetch(`/api/robot/${robotId}/map/info`)
+            .then(r => r.ok ? r.json() : null)
+            .then(info => { if (info) { mapInfo = info; loadMapImage(robotId); } })
+            .catch(() => {});
     }
 
     function selectRobot(robotId) {
@@ -397,6 +403,7 @@
     function loadMapImage(robotId) {
         const img = new Image();
         img.onload = () => { mapImage = img; redrawMap(); };
+        img.onerror = () => console.error(`[map] PNG 로드 실패: /api/robot/${robotId}/map`);
         img.src = `/api/robot/${robotId}/map?t=${Date.now()}`;
     }
 

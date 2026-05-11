@@ -121,9 +121,11 @@ public class RobotStatusService {
 
     // /map 메시지 처리
     public void onMap(String robotId, JsonNode msg) {
+        log.info("[RobotStatusService][{}] /map 수신 — 파싱 시작", robotId);
         mapService.updateMap(robotId, msg);
         MapService.MapData data = mapService.getMapData(robotId);
         if (data != null) {
+            log.info("[RobotStatusService][{}] 맵 저장 완료 ({}x{}, res={})", robotId, data.width(), data.height(), data.resolution());
             messagingTemplate.convertAndSend("/topic/robot/" + robotId + "/map", Map.of(
                     "width", data.width(),
                     "height", data.height(),
@@ -131,6 +133,8 @@ public class RobotStatusService {
                     "originX", data.originX(),
                     "originY", data.originY()
             ));
+        } else {
+            log.warn("[RobotStatusService][{}] 맵 파싱 실패 — MapData null", robotId);
         }
     }
 
