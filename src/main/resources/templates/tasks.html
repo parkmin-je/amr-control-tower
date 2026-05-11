@@ -185,6 +185,7 @@
     </style>
 </head>
 <body>
+<div class="sidenav-overlay" id="sidenav-overlay" onclick="closeSidenav()"></div>
 <div class="layout">
 
     <!-- Sidebar nav (same as dashboard) -->
@@ -230,6 +231,9 @@
     <div class="main">
         <header class="topbar">
             <div class="topbar-left">
+                <button class="hamburger" onclick="toggleSidenav()" aria-label="Menu">
+                    <span></span><span></span><span></span>
+                </button>
                 <h1 class="page-title" data-i18n="nav.tasks">Tasks</h1>
             </div>
             <div class="topbar-right">
@@ -380,6 +384,15 @@ function createTask() {
 function taskAction(id, action) {
     fetch(`/api/tasks/${id}/${action}`, { method: 'POST' })
         .then(r => { if (r.ok) location.reload(); else alert('Action failed'); });
+}
+
+function toggleSidenav() {
+    document.querySelector('.sidenav').classList.toggle('open');
+    document.getElementById('sidenav-overlay').classList.toggle('open');
+}
+function closeSidenav() {
+    document.querySelector('.sidenav').classList.remove('open');
+    document.getElementById('sidenav-overlay').classList.remove('open');
 }
 </script>
 </body>

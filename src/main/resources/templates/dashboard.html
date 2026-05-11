@@ -15,6 +15,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
+<div class="sidenav-overlay" id="sidenav-overlay" onclick="closeSidenav()"></div>
 <div class="layout">
 
     <!-- ── SIDE NAV ──────────────────────────────────────────────── -->
@@ -83,6 +84,9 @@
         <!-- Header -->
         <header class="topbar">
             <div class="topbar-left">
+                <button class="hamburger" onclick="toggleSidenav()" aria-label="Menu">
+                    <span></span><span></span><span></span>
+                </button>
                 <h1 class="page-title">Dashboard</h1>
                 <div class="breadcrumb">
                     <span class="bc-item" id="bc-robot" th:text="${robots[0]?.robotId} ?: 'No robots'">robot-01</span>
@@ -539,6 +543,9 @@
         fetch(`/api/robot/${currentRobotId}/command/goal`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ x: world.x, y: world.y, theta: 0 })
+        }).then(r => {
+            if (r.ok) showToast(t('toast.goalOk'), 'success');
+            else       showToast(t('toast.goalFail'), 'error');
         });
     });
 
@@ -687,8 +694,20 @@
     });
 
     // ── Commands ──────────────────────────────────────────────────
-    function sendEstop() { fetch(`/api/robot/${currentRobotId}/command/estop`, { method: 'POST' }).then(() => updateStateBadge('EMERGENCY_STOP')); }
-    function clearEstop() { fetch(`/api/robot/${currentRobotId}/command/estop/clear`, { method: 'POST' }).then(() => updateStateBadge('IDLE')); }
+    function sendEstop() {
+        fetch(`/api/robot/${currentRobotId}/command/estop`, { method: 'POST' })
+            .then(r => {
+                if (r.ok) { updateStateBadge('EMERGENCY_STOP'); showToast(t('toast.estopOk'), 'success'); }
+                else       { showToast(t('toast.estopFail'), 'error'); }
+            });
+    }
+    function clearEstop() {
+        fetch(`/api/robot/${currentRobotId}/command/estop/clear`, { method: 'POST' })
+            .then(r => {
+                if (r.ok) { updateStateBadge('IDLE'); showToast(t('toast.resumeOk'), 'success'); }
+                else       { showToast(t('toast.resumeFail'), 'error'); }
+            });
+    }
     let navStartDistance = null;
 
     function sendGoal() {
@@ -747,6 +766,16 @@
         toast.textContent = message;
         document.body.appendChild(toast);
         setTimeout(() => toast.remove(), 3000);
+    }
+
+    // ── Sidebar toggle (mobile) ───────────────────────────────────
+    function toggleSidenav() {
+        document.querySelector('.sidenav').classList.toggle('open');
+        document.getElementById('sidenav-overlay').classList.toggle('open');
+    }
+    function closeSidenav() {
+        document.querySelector('.sidenav').classList.remove('open');
+        document.getElementById('sidenav-overlay').classList.remove('open');
     }
 
     // ── Clock ─────────────────────────────────────────────────────

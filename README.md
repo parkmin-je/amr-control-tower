@@ -418,9 +418,11 @@ amr-control-tower/
 - [x] Bean Validation — 속도·좌표 범위 검증 (@Valid)
 - [x] Admin 토픽 편집 UI — 로봇 등록 폼에서 6개 토픽 이름 직접 설정 가능
 
+### Phase 6 — UX·권한 강화 (완료)
+- [x] 명령 결과 토스트 UI — E-Stop·Resume·목표 전송 성공/실패 알림, toast CSS 버그 수정
+- [x] 로봇별 사용자 권한 분리 — `user_robot_permission` 테이블, Operator 담당 로봇 설정, Admin 패널 배정 UI
+- [x] Fleet 일괄 E-Stop — `POST /api/fleet/command/estop`, Fleet 페이지 버튼
+- [x] 모바일 반응형 개선 — ≤1024px 2컬럼, ≤768px 사이드바 오버레이·햄버거 토글
+
 ### 다음 작업 목록
-- [ ] 명령 결과 토스트 UI — E-Stop·Resume 버튼 성공/실패 알림
-- [ ] 로봇별 사용자 권한 분리 — Operator가 담당 로봇만 제어하도록
-- [ ] Fleet 일괄 E-Stop — 전체 로봇 동시 긴급 정지
-- [ ] 모바일 반응형 개선 — 태블릿 레이아웃 대응
 - [ ] 실 로봇 연결 테스트 — Nav2 목표 전송·도착 확인, 배터리 포맷 검증

@@ -98,6 +98,7 @@
     </style>
 </head>
 <body>
+<div class="sidenav-overlay" id="sidenav-overlay" onclick="closeSidenav()"></div>
 <div class="layout">
 
     <!-- Sidebar nav -->
@@ -131,6 +132,9 @@
     <div class="main">
         <header class="topbar">
             <div class="topbar-left">
+                <button class="hamburger" onclick="toggleSidenav()" aria-label="Menu">
+                    <span></span><span></span><span></span>
+                </button>
                 <h1 class="page-title" data-i18n="nav.fleet">Fleet</h1>
                 <div class="sys-pill">
                     <span class="pill-label" data-i18n="label.units">Units</span>
@@ -138,6 +142,9 @@
                 </div>
             </div>
             <div class="topbar-right">
+                <button class="cmd-btn cmd-estop" sec:authorize="hasAnyRole('OPERATOR','ADMIN')"
+                        onclick="fleetEstop()" data-i18n="fleet.estopAll"
+                        style="font-size:0.72rem; padding:0.3rem 0.75rem;">Fleet E-Stop</button>
                 <div class="lang-picker">
                     <button class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
                     <button class="lang-btn" data-lang="ko" onclick="setLang('ko')">한</button>
@@ -240,8 +247,37 @@
         card.className = 'robot-card state-' + state.toLowerCase().replace(/_/g, '-');
     }
 
-    function estop(robotId)  { fetch(`/api/robot/${robotId}/command/estop`, { method: 'POST' }); }
-    function resume(robotId) { fetch(`/api/robot/${robotId}/command/estop/clear`, { method: 'POST' }); }
+    function estop(robotId) {
+        fetch(`/api/robot/${robotId}/command/estop`, { method: 'POST' })
+            .then(r => r.ok ? showToast(`[${robotId}] 긴급 정지 실행`, 'success') : showToast(`[${robotId}] E-Stop 실패`, 'error'));
+    }
+    function resume(robotId) {
+        fetch(`/api/robot/${robotId}/command/estop/clear`, { method: 'POST' })
+            .then(r => r.ok ? showToast(`[${robotId}] 정지 해제`, 'success') : showToast(`[${robotId}] 해제 실패`, 'error'));
+    }
+
+    function fleetEstop() {
+        if (!confirm('전체 로봇에 긴급 정지를 실행합니다. 계속하시겠습니까?')) return;
+        fetch('/api/fleet/command/estop', { method: 'POST' })
+            .then(r => r.ok ? showToast('Fleet 긴급 정지 실행', 'success') : showToast('Fleet E-Stop 실패', 'error'));
+    }
+
+    function showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.className = 'toast toast-' + type;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    }
+
+    function toggleSidenav() {
+        document.querySelector('.sidenav').classList.toggle('open');
+        document.getElementById('sidenav-overlay').classList.toggle('open');
+    }
+    function closeSidenav() {
+        document.querySelector('.sidenav').classList.remove('open');
+        document.getElementById('sidenav-overlay').classList.remove('open');
+    }
 
     connect();
 </script>
