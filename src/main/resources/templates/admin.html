@@ -93,9 +93,37 @@
             border-radius: 5px; font-size: 0.75rem; font-weight: 600; cursor: pointer; white-space: nowrap;
         }
         .btn-sm:hover { background: #e4e4e7; }
+
+        /* Robot permission modal */
+        .perm-modal-overlay {
+            display: none; position: fixed; inset: 0; z-index: 1000;
+            background: rgba(0,0,0,0.6); align-items: center; justify-content: center;
+        }
+        .perm-modal-overlay.open { display: flex; }
+        .perm-modal {
+            background: var(--surface); border: 1px solid var(--border-2); border-radius: 10px;
+            padding: 1.25rem; min-width: 320px; max-width: 460px; width: 90%;
+        }
+        .perm-modal-title {
+            font-size: 0.78rem; font-weight: 600; color: var(--text);
+            margin-bottom: 1rem; padding-bottom: 0.625rem; border-bottom: 1px solid var(--border);
+        }
+        .perm-robot-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0.4rem 0; border-bottom: 1px solid rgba(39,39,42,0.5); font-size: 0.75rem;
+        }
+        .perm-robot-item:last-child { border-bottom: none; }
+        .perm-robot-id { font-family: 'JetBrains Mono', monospace; color: var(--text-2); }
+        .perm-assigned { color: var(--green); font-size: 0.65rem; font-weight: 600; }
+        .perm-hint {
+            font-size: 0.68rem; color: var(--text-3); margin-bottom: 0.75rem;
+            background: var(--bg); border: 1px solid var(--border); border-radius: 5px;
+            padding: 0.4rem 0.6rem;
+        }
     </style>
 </head>
 <body>
+<div class="sidenav-overlay" id="sidenav-overlay" onclick="closeSidenav()"></div>
 <div class="layout">
 
     <!-- Sidebar nav -->
@@ -129,6 +157,9 @@
     <div class="main">
         <header class="topbar">
             <div class="topbar-left">
+                <button class="hamburger" onclick="toggleSidenav()" aria-label="Menu">
+                    <span></span><span></span><span></span>
+                </button>
                 <h1 class="page-title" data-i18n="nav.admin">Admin</h1>
             </div>
             <div class="topbar-right">
@@ -200,6 +231,11 @@
                                         <button class="action-btn danger"
                                                 th:data-uid="${u.id}"
                                                 onclick="changeRolePrompt(this.dataset.uid)">Role</button>
+                                        <button class="action-btn"
+                                                th:data-uid="${u.id}"
+                                                th:data-uname="${u.username}"
+                                                onclick="openPermModal(this.dataset.uid, this.dataset.uname)"
+                                                data-i18n="admin.assign">Assign</button>
                                     </td>
                                 </tr>
                             </tbody>
@@ -301,7 +337,21 @@
     </div>
 </div>
 
-<script>
+<!-- Robot Permission Modal -->
+<div class="perm-modal-overlay" id="perm-modal-overlay" onclick="closePermModal(event)">
+    <div class="perm-modal" onclick="event.stopPropagation()">
+        <div class="perm-modal-title" id="perm-modal-title">담당 로봇 설정</div>
+        <p class="perm-hint">담당 로봇이 없으면 전체 로봇 제어 가능. 지정 시 해당 로봇만 제어 허용.</p>
+        <div id="perm-robot-list"></div>
+        <div style="margin-top:1rem; text-align:right;">
+            <button class="btn-sm" style="background:var(--surface-2);color:var(--text);" onclick="closePermModal()">닫기</button>
+        </div>
+    </div>
+</div>
+
+<script th:inline="javascript">
+const ALL_ROBOTS = /*[[${robots}]]*/ [];
+
 function createUser() {
     fetch('/api/admin/users', {
         method: 'POST',
@@ -351,6 +401,61 @@ function registerRobot() {
 function deregisterRobot(id) {
     if (!confirm(`Disable robot ${id}?`)) return;
     fetch(`/api/admin/robots/${id}`, { method: 'DELETE' }).then(r => { if (r.ok) location.reload(); });
+}
+
+let permUserId = null;
+
+function openPermModal(userId, username) {
+    permUserId = userId;
+    document.getElementById('perm-modal-title').textContent = `담당 로봇 설정 — ${username}`;
+    document.getElementById('perm-modal-overlay').classList.add('open');
+    loadPermRobots(userId);
+}
+
+function closePermModal(e) {
+    if (!e || e.target === document.getElementById('perm-modal-overlay')) {
+        document.getElementById('perm-modal-overlay').classList.remove('open');
+    }
+}
+
+function loadPermRobots(userId) {
+    fetch(`/api/admin/users/${userId}/robots`).then(r => r.json()).then(assigned => {
+        const assignedIds = assigned.map(p => p.robotId);
+        const list = document.getElementById('perm-robot-list');
+        list.innerHTML = ALL_ROBOTS.map(r => `
+            <div class="perm-robot-item">
+                <span class="perm-robot-id">${r.robotId}</span>
+                <div style="display:flex;align-items:center;gap:0.5rem;">
+                    ${assignedIds.includes(r.robotId) ? '<span class="perm-assigned">✓ 배정됨</span>' : ''}
+                    ${assignedIds.includes(r.robotId)
+                        ? `<button class="action-btn danger" onclick="unassignRobot('${r.robotId}')">해제</button>`
+                        : `<button class="action-btn" onclick="assignRobot('${r.robotId}')">배정</button>`
+                    }
+                </div>
+            </div>
+        `).join('');
+    });
+}
+
+function assignRobot(robotId) {
+    fetch(`/api/admin/users/${permUserId}/robots`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ robotId })
+    }).then(r => { if (r.ok) loadPermRobots(permUserId); });
+}
+
+function unassignRobot(robotId) {
+    fetch(`/api/admin/users/${permUserId}/robots/${robotId}`, { method: 'DELETE' })
+        .then(r => { if (r.ok) loadPermRobots(permUserId); });
+}
+
+function toggleSidenav() {
+    document.querySelector('.sidenav').classList.toggle('open');
+    document.getElementById('sidenav-overlay').classList.toggle('open');
+}
+function closeSidenav() {
+    document.querySelector('.sidenav').classList.remove('open');
+    document.getElementById('sidenav-overlay').classList.remove('open');
 }
 </script>
 </body>

@@ -9,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -50,6 +52,19 @@ public class RobotCommandService {
                 linear, angular);
         rosBridgeManager.publishToRobot(robotId, cmdVelTopic, "geometry_msgs/Twist", twist);
         robotStatusService.onManualDriveCmd(robotId);  // watchdog 타이머 갱신
+    }
+
+    /** 전체 로봇 일괄 긴급 정지 */
+    public void sendEmergencyStopAll(List<String> robotIds) {
+        robotIds.forEach(id -> {
+            try {
+                sendEmergencyStop(id);
+                robotStatusService.publishEvent(id, RobotEvent.EventType.STOPPED, "Fleet 일괄 긴급 정지 명령 수신");
+            } catch (Exception e) {
+                log.error("[Command][{}] Fleet E-Stop 실패: {}", id, e.getMessage());
+            }
+        });
+        log.info("[Command] Fleet 긴급 정지 완료: {}대", robotIds.size());
     }
 
     /** 긴급 정지 해제 */
