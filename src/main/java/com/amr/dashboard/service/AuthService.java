@@ -36,6 +36,7 @@ public class AuthService implements UserDetailsService {
         if (userRepository.existsByUsername(username)) {
             throw new IllegalArgumentException("이미 존재하는 사용자명입니다: " + username);
         }
+        validatePassword(rawPassword);
         return userRepository.save(User.builder()
                 .username(username)
                 .passwordHash(passwordEncoder.encode(rawPassword))
@@ -47,7 +48,23 @@ public class AuthService implements UserDetailsService {
     public void changePassword(Long userId, String newRawPassword) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
+        validatePassword(newRawPassword);
         user.changePassword(passwordEncoder.encode(newRawPassword));
+    }
+
+    /**
+     * 비밀번호 정책: 최소 8자, 대문자 1개 이상, 숫자 1개 이상
+     */
+    private void validatePassword(String rawPassword) {
+        if (rawPassword == null || rawPassword.length() < 8) {
+            throw new IllegalArgumentException("비밀번호는 최소 8자 이상이어야 합니다.");
+        }
+        if (!rawPassword.chars().anyMatch(Character::isUpperCase)) {
+            throw new IllegalArgumentException("비밀번호에 대문자가 최소 1개 포함되어야 합니다.");
+        }
+        if (!rawPassword.chars().anyMatch(Character::isDigit)) {
+            throw new IllegalArgumentException("비밀번호에 숫자가 최소 1개 포함되어야 합니다.");
+        }
     }
 
     @Transactional

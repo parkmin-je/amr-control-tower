@@ -34,7 +34,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: 빌드 및 단위 테스트 실행
-        run: ./gradlew test --info
+        run: ./gradlew test jacocoTestReport --info
         env:
           SPRING_PROFILES_ACTIVE: dev
 
@@ -45,3 +45,20 @@ jobs:
           name: test-results
           path: build/reports/tests/test/
           retention-days: 7
+
+      - name: JaCoCo 커버리지 리포트 업로드
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: jacoco-coverage
+          path: build/reports/jacoco/test/html/
+          retention-days: 7
+
+      - name: JaCoCo 커버리지 요약 (PR 코멘트)
+        uses: madrapps/jacoco-report@v1.6.1
+        if: github.event_name == 'pull_request'
+        with:
+          paths: build/reports/jacoco/test/jacocoTestReport.xml
+          token: ${{ secrets.GITHUB_TOKEN }}
+          min-coverage-overall: 60
+          min-coverage-changed-files: 60
