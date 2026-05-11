@@ -1,0 +1,120 @@
+groups:
+  - name: amr-dashboard
+    interval: 30s
+    rules:
+
+      # ── 가용성 ─────────────────────────────────────────────────
+      - alert: AppDown
+        expr: up{job="amr-dashboard"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "AMR Dashboard 서비스 다운"
+          description: "{{ $labels.instance }} 에서 AMR Dashboard 가 1분 이상 응답하지 않습니다."
+
+      # ── HTTP 에러율 ────────────────────────────────────────────
+      - alert: HighErrorRate
+        expr: |
+          rate(http_server_requests_seconds_count{job="amr-dashboard", status=~"5.."}[5m])
+          /
+          rate(http_server_requests_seconds_count{job="amr-dashboard"}[5m])
+          > 0.05
+        for: 2m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "HTTP 5xx 에러율 > 5%"
+          description: "{{ $labels.instance }} 에서 5xx 에러율이 5%를 초과했습니다. (현재: {{ $value | humanizePercentage }})"
+
+      # ── 응답 시간 ───────────────────────────────────────────────
+      - alert: SlowResponseTime
+        expr: |
+          histogram_quantile(0.99,
+            rate(http_server_requests_seconds_bucket{job="amr-dashboard"}[5m])
+          ) > 2.0
+        for: 3m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "HTTP P99 응답 시간 > 2초"
+          description: "{{ $labels.instance }} 의 P99 응답 시간이 2초를 초과했습니다."
+
+      # ── JVM 메모리 ─────────────────────────────────────────────
+      - alert: HighHeapUsage
+        expr: |
+          jvm_memory_used_bytes{job="amr-dashboard", area="heap"}
+          /
+          jvm_memory_max_bytes{job="amr-dashboard", area="heap"}
+          > 0.85
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "JVM 힙 사용률 > 85%"
+          description: "{{ $labels.instance }} 의 JVM 힙 사용률이 85%를 초과했습니다. OOM 위험."
+
+      - alert: CriticalHeapUsage
+        expr: |
+          jvm_memory_used_bytes{job="amr-dashboard", area="heap"}
+          /
+          jvm_memory_max_bytes{job="amr-dashboard", area="heap"}
+          > 0.95
+        for: 2m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "JVM 힙 사용률 > 95% — OOM 임박"
+          description: "{{ $labels.instance }} 의 JVM 힙이 거의 고갈되었습니다. 즉시 조치 필요."
+
+      # ── DB 커넥션 풀 ────────────────────────────────────────────
+      - alert: DBConnectionPoolExhausted
+        expr: |
+          hikaricp_connections_active{job="amr-dashboard"}
+          /
+          hikaricp_connections{job="amr-dashboard"}
+          > 0.90
+        for: 2m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "HikariCP 커넥션 풀 90% 이상 사용"
+          description: "{{ $labels.instance }} 의 DB 커넥션 풀이 {{ $value | humanizePercentage }} 사용 중입니다."
+
+      # ── 로봇 오프라인 ──────────────────────────────────────────
+      - alert: RobotOffline
+        expr: amr_robot_online{job="amr-dashboard"} == 0
+        for: 2m
+        labels:
+          severity: warning
+          team: robotics
+        annotations:
+          summary: "로봇 오프라인 감지"
+          description: "로봇 {{ $labels.robot_id }} 가 2분 이상 오프라인 상태입니다."
+
+      # ── 로봇 배터리 ────────────────────────────────────────────
+      - alert: RobotBatteryLow
+        expr: amr_robot_battery_percent{job="amr-dashboard"} < 20
+        for: 1m
+        labels:
+          severity: warning
+          team: robotics
+        annotations:
+          summary: "로봇 배터리 부족"
+          description: "로봇 {{ $labels.robot_id }} 의 배터리가 {{ $value }}% 입니다."
+
+      - alert: RobotBatteryCritical
+        expr: amr_robot_battery_percent{job="amr-dashboard"} < 10
+        for: 0m
+        labels:
+          severity: critical
+          team: robotics
+        annotations:
+          summary: "로봇 배터리 위험 수준"
+          description: "로봇 {{ $labels.robot_id }} 의 배터리가 {{ $value }}% 입니다. 즉시 충전 필요."
