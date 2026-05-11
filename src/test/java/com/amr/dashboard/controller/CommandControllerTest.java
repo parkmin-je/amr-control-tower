@@ -2,6 +2,7 @@ package com.amr.dashboard.controller;
 
 import com.amr.dashboard.config.SecurityConfig;
 import com.amr.dashboard.service.RobotCommandService;
+import com.amr.dashboard.service.RobotPermissionService;
 import com.amr.dashboard.service.RobotStatusService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
@@ -38,6 +39,9 @@ class CommandControllerTest {
 
     @MockBean
     RobotStatusService robotStatusService;
+
+    @MockBean
+    RobotPermissionService permissionService;
 
     @Test
     @WithMockUser(roles = "OPERATOR")
