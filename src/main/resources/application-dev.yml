@@ -27,3 +27,28 @@ spring:
 eureka:
   client:
     enabled: false
+
+# dev: 무거운 기능 비활성화
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  metrics:
+    export:
+      prometheus:
+        enabled: false
+  tracing:
+    enabled: false
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      robot-command:
+        register-health-indicator: false
+
+spring:
+  cloud:
+    loadbalancer:
+      cache:
+        enabled: false
